@@ -44,32 +44,28 @@ export function buildWorkbookBuffer(
   scores: Record<string, ScoreInput>,
   meta: ExportMeta,
 ): ArrayBuffer {
-  const infoRows = [
-    { Campo: "Participante", Valor: meta.participantName.trim() },
-    { Campo: "Exportado em", Valor: formatDateTime(meta.exportedAt) },
-    {
-      Campo: "Jogos preenchidos",
-      Valor: `${meta.filledCount}/${meta.totalMatches}`,
-    },
+  const data: unknown[][] = [
+    ["Participante", meta.participantName.trim()],
+    ["Exportado em", formatDateTime(meta.exportedAt)],
+    ["Jogos preenchidos", `${meta.filledCount}/${meta.totalMatches}`],
+    [],
+    ["#", "Grupo", "Mandante", "Gols mandante", "Visitante", "Gols visitante"],
+    ...matches.map((m, i) => {
+      const s = scores[m.id] ?? { home: "", away: "" };
+      return [
+        i + 1,
+        m.group,
+        m.home.name,
+        s.home.trim(),
+        m.away.name,
+        s.away.trim(),
+      ];
+    }),
   ];
 
-  const matchRows = matches.map((m, i) => {
-    const s = scores[m.id] ?? { home: "", away: "" };
-    return {
-      "#": i + 1,
-      Grupo: m.group,
-      Mandante: m.home.name,
-      "Gols mandante": s.home.trim(),
-      Visitante: m.away.name,
-      "Gols visitante": s.away.trim(),
-    };
-  });
-
-  const infoSheet = XLSX.utils.json_to_sheet(infoRows);
-  const gamesSheet = XLSX.utils.json_to_sheet(matchRows);
+  const ws = XLSX.utils.aoa_to_sheet(data);
   const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, infoSheet, "Info");
-  XLSX.utils.book_append_sheet(book, gamesSheet, "Jogos");
+  XLSX.utils.book_append_sheet(book, ws, "Bolão Copa 2026");
 
   return XLSX.write(book, { type: "array", bookType: "xlsx" });
 }
