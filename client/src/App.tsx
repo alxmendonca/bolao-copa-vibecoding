@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ALL_MATCHES, GROUPS } from "./data/groupStage";
+import AuditPage from "./components/AuditPage";
 import { ExportForm } from "./components/ExportForm";
 import { GroupSection } from "./components/GroupSection";
 import { BOLAO_CONFIG } from "./config/bolao";
@@ -40,6 +41,7 @@ export default function App() {
   const [scores, setScores] = useState<Record<string, ScoreInput>>(emptyScores);
   const [participantName, setParticipantName] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [showAudit, setShowAudit] = useState(false);
 
   useEffect(() => {
     const stored = loadBolaoState();
@@ -84,6 +86,10 @@ export default function App() {
     return n;
   }, [scores]);
 
+  if (showAudit) {
+    return <AuditPage onBack={() => setShowAudit(false)} />;
+  }
+
   return (
     <div className="app">
       <header className="hero">
@@ -97,6 +103,13 @@ export default function App() {
           <div className="hero-actions">
             <button type="button" className="btn btn-ghost" onClick={resetAll}>
               Limpar todos os placares
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setShowAudit(true)}
+            >
+              Auditoria
             </button>
             <span className="hero-meta">
               {filledCount}/{ALL_MATCHES.length} jogos com placar completo
@@ -159,9 +172,13 @@ export default function App() {
           <strong>{filledCount}/{ALL_MATCHES.length}</strong>
           <span>jogos</span>
         </div>
-        <a href="#export-section" className="btn btn-primary btn-dock">
-          Enviar
-        </a>
+        <button
+          type="button"
+          className="btn btn-primary btn-dock"
+          onClick={() => setShowAudit(true)}
+        >
+          Auditoria
+        </button>
       </aside>
     </div>
   );
