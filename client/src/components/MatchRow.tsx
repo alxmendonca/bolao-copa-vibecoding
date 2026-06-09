@@ -2,15 +2,19 @@ import { useRef } from "react";
 import type { MatchDef } from "../data/groupStage";
 import type { ScoreInput } from "../lib/standings";
 import { validateScoreField } from "../lib/standings";
+import { calculateMatchPoints } from "../lib/scoring";
 
 type Props = {
   match: MatchDef;
   score: ScoreInput;
   onChange: (matchId: string, field: "home" | "away", value: string) => void;
+  disabled?: boolean;
+  officialScore?: ScoreInput;
+  rules?: { exact: number; result: number };
 };
 
 function focusNextInput(current: HTMLInputElement): void {
-  const inputs = document.querySelectorAll<HTMLInputElement>(".score-input");
+  const inputs = document.querySelectorAll<HTMLInputElement>(".score-input:not(:disabled)");
   for (let i = 0; i < inputs.length - 1; i++) {
     if (inputs[i] === current) {
       inputs[i + 1].focus();
@@ -19,7 +23,7 @@ function focusNextInput(current: HTMLInputElement): void {
   }
 }
 
-export function MatchRow({ match, score, onChange }: Props) {
+export function MatchRow({ match, score, onChange, disabled, officialScore, rules }: Props) {
   const awayRef = useRef<HTMLInputElement>(null);
 
   const homeOk = validateScoreField(score.home);
@@ -39,8 +43,48 @@ export function MatchRow({ match, score, onChange }: Props) {
     }
   };
 
+  // Calcula o status do palpite se houver resultado oficial e ambos os palpites estiverem preenchidos
+  const hasOfficial = !!(
+    officialScore &&
+    officialScore.home.trim() !== "" &&
+    officialScore.away.trim() !== ""
+  );
+  const hasPrediction = !!(
+    score.home.trim() !== "" &&
+    score.away.trim() !== ""
+  );
+
+  let statusClass = "";
+  let pointsLabel = "";
+
+  if (hasOfficial && rules) {
+    if (hasPrediction) {
+      const points = calculateMatchPoints(
+        score.home,
+        score.away,
+        officialScore.home,
+        officialScore.away,
+        rules,
+      );
+
+      if (points === rules.exact) {
+        statusClass = " match-row--exact";
+        pointsLabel = `+${points} pts (Acertou o Placar)`;
+      } else if (points === rules.result) {
+        statusClass = " match-row--difference";
+        pointsLabel = `+${points} pts (Acertou o Resultado)`;
+      } else {
+        statusClass = " match-row--wrong";
+        pointsLabel = "0 pts (Não Acertou)";
+      }
+    } else {
+      statusClass = " match-row--wrong";
+      pointsLabel = "0 pts (Sem Palpite)";
+    }
+  }
+
   return (
-    <div className="match-row">
+    <div className={`match-row${statusClass}`}>
       {match.scheduled ? (
         <div className="match-meta">{match.scheduled}</div>
       ) : null}
@@ -56,6 +100,7 @@ export function MatchRow({ match, score, onChange }: Props) {
             value={score.home}
             onChange={handleHomeChange}
             placeholder="—"
+            disabled={disabled}
           />
           <span className="score-x">×</span>
           <input
@@ -68,10 +113,20 @@ export function MatchRow({ match, score, onChange }: Props) {
             value={score.away}
             onChange={handleAwayChange}
             placeholder="—"
+            disabled={disabled}
           />
         </div>
         <span className="team-name away">{match.away.name}</span>
       </div>
+
+      {hasOfficial && (
+        <div className="match-official-result">
+          <span className="official-badge">
+            Placar Oficial: <strong>{officialScore!.home} × {officialScore!.away}</strong>
+          </span>
+          {pointsLabel && <span className="points-label">{pointsLabel}</span>}
+        </div>
+      )}
     </div>
   );
 }

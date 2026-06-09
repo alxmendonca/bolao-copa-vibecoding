@@ -83,12 +83,18 @@ function mk(
   away: keyof typeof TEAMS,
   scheduled: string,
 ): MatchDef {
+  let time = "16:00";
+  if (n === 2 || n === 4) {
+    time = "20:00";
+  } else if (n === 5 || n === 6) {
+    time = "17:00";
+  }
   return {
     id: `${group}-${n}`,
     group,
     home: tm(home),
     away: tm(away),
-    scheduled,
+    scheduled: `${scheduled} às ${time}`,
   };
 }
 

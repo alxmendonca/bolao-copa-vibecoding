@@ -695,3 +695,447 @@ a {
     display: inline;
   }
 }
+
+/* ==========================================================================
+   Navegação e Cabeçalho Geral
+   ========================================================================== */
+.site-header {
+  background: rgba(12, 17, 24, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.site-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.site-logo {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.site-logo span {
+  background: linear-gradient(to right, var(--text), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.site-nav {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.nav-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   Novas Telas (Formulários, Alertas, Dashboards)
+   ========================================================================== */
+.form-card {
+  max-width: 650px;
+  margin: 2rem auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem 1.75rem;
+  box-shadow: var(--shadow);
+}
+
+.form-card-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.form-card-sub {
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+  font-size: 0.9rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.form-input,
+.form-select {
+  padding: 0.65rem 0.85rem;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.form-helper {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+
+.form-rules-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+/* Alertas */
+.alert-box {
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.alert-box strong {
+  font-weight: 700;
+}
+
+.alert-box p {
+  margin: 0;
+}
+
+.alert-box--warning {
+  background: rgba(234, 179, 8, 0.08);
+  color: #fbbf24;
+  border-color: rgba(234, 179, 8, 0.25);
+}
+
+.alert-box--error {
+  background: rgba(248, 113, 113, 0.08);
+  color: var(--danger);
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+.alert-box--success {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+/* Dashboard da Liga */
+.league-info-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.league-info-details {
+  flex: 1;
+  min-width: 280px;
+}
+
+.league-info-details h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.league-info-meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.rules-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.65rem;
+}
+
+.rules-badge {
+  background: var(--bg-elevated);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.rules-badge strong {
+  color: var(--accent);
+}
+
+.dashboard-layout {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "upcoming"
+    "standings"
+    "past";
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .dashboard-layout {
+    grid-template-columns: 1.6fr 1fr;
+    grid-template-areas:
+      "standings upcoming"
+      "past upcoming";
+  }
+}
+
+.panel-upcoming {
+  grid-area: upcoming;
+}
+
+.panel-standings {
+  grid-area: standings;
+}
+
+.panel-past {
+  grid-area: past;
+}
+
+.dashboard-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.25rem;
+  box-shadow: var(--shadow);
+  height: fit-content;
+}
+
+.dashboard-panel-title {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+/* Link na Tabela de Classificação */
+.col-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.col-link:hover {
+  text-decoration: underline;
+  opacity: 0.9;
+}
+
+/* Matriz de Palpites */
+.matrix-table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  width: 100%;
+  max-width: 100%;
+}
+
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.matrix-table th,
+.matrix-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.matrix-table th {
+  color: var(--muted);
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.matrix-table .col-name {
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  left: 0;
+  background: var(--bg-elevated);
+  z-index: 10;
+  border-right: 1px solid var(--border);
+  min-width: 100px;
+}
+
+.matrix-match-header {
+  min-width: 130px;
+}
+
+.matrix-match-flag {
+  font-size: 0.7rem;
+  color: var(--muted);
+  display: block;
+  font-weight: 400;
+  margin-top: 0.2rem;
+}
+
+.matrix-score-cell {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  font-weight: 700;
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  min-width: 2.2rem;
+}
+
+/* ==========================================================================
+   Feedback Visual de Palpites vs Resultados Oficiais
+   ========================================================================== */
+.match-row--exact {
+  border-color: rgba(34, 197, 94, 0.4) !important;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.08) 0%, var(--bg-elevated) 100%) !important;
+}
+
+.match-row--difference {
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, var(--bg-elevated) 100%) !important;
+}
+
+.match-row--simple {
+  border-color: rgba(234, 179, 8, 0.4) !important;
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.08) 0%, var(--bg-elevated) 100%) !important;
+}
+
+.match-row--wrong {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.04) 0%, var(--bg-elevated) 100%) !important;
+}
+
+.match-official-result {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.official-badge {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.official-badge strong {
+  color: var(--accent);
+}
+
+.points-label {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.match-row--exact .points-label {
+  color: var(--accent);
+}
+
+.match-row--difference .points-label {
+  color: #60a5fa;
+}
+
+.match-row--simple .points-label {
+  color: var(--gold);
+}
+
+.match-row--wrong .points-label {
+  color: var(--danger);
+}
+
+/* ==========================================================================
+   Tooltips (Dicas explicativas)
+   ========================================================================== */
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: #101726;
+  color: var(--text);
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  white-space: normal;
+  width: 240px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 1000;
+  text-align: center;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+
+
