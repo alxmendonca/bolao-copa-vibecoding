@@ -12,9 +12,19 @@ type Props = {
     field: "home" | "away",
     value: string,
   ) => void;
+  disabled?: boolean;
+  officialScores?: Record<string, ScoreInput>;
+  rules?: { exact: number; result: number };
 };
 
-export function GroupSection({ group, scores, onScoreChange }: Props) {
+export function GroupSection({
+  group,
+  scores,
+  onScoreChange,
+  disabled,
+  officialScores,
+  rules,
+}: Props) {
   const standings = computeGroupStandings(group.teams, group.matches, scores);
 
   return (
@@ -35,6 +45,9 @@ export function GroupSection({ group, scores, onScoreChange }: Props) {
                   match={m}
                   score={scores[m.id] ?? { home: "", away: "" }}
                   onChange={onScoreChange}
+                  disabled={disabled}
+                  officialScore={officialScores?.[m.id]}
+                  rules={rules}
                 />
               </li>
             ))}

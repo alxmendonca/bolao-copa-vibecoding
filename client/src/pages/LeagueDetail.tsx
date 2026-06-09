@@ -1,0 +1,401 @@
+import { useEffect, useState, useMemo } from "react";
+import { Link, useParams } from "react-router-dom";
+import {
+  getLeague,
+  getParticipants,
+  getOfficialResults,
+  isSubmissionDeadlinePassed,
+  isFirebaseConfigured,
+  type League,
+  type Participant,
+  type OfficialResults,
+} from "../lib/firebaseService";
+import { rankParticipants, calculateMatchPoints } from "../lib/scoring";
+import { ALL_MATCHES } from "../data/groupStage";
+
+export default function LeagueDetail() {
+  const { leagueId } = useParams<{ leagueId: string }>();
+  const [league, setLeague] = useState<League | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [officialResults, setOfficialResults] = useState<OfficialResults | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!leagueId) return;
+
+    const loadData = async () => {
+      try {
+        const [leagueData, participantsList, results] = await Promise.all([
+          getLeague(leagueId),
+          getParticipants(leagueId),
+          getOfficialResults(),
+        ]);
+        setLeague(leagueData);
+        setParticipants(participantsList);
+        setOfficialResults(results);
+      } catch (err: any) {
+        setError(err.message || "Erro ao carregar dados da liga.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [leagueId]);
+
+  // Prazo de inscrição/edição expirado?
+  const deadlinePassed = isSubmissionDeadlinePassed();
+
+  // Calcula classificação geral dos participantes
+  const rankedParticipants = useMemo(() => {
+    if (!league || !officialResults) return [];
+    return rankParticipants(participants, officialResults.scores, league.rules);
+  }, [league, participants, officialResults]);
+
+  // Helper para analisar a data e hora do jogo (ex: "11 de jun às 16:00")
+  const parseMatchDate = (scheduledStr: string): number => {
+    const cleaned = (scheduledStr || "").trim().toLowerCase();
+    const match = cleaned.match(/(\d+)\s+de\s+(\w+)(?:\s+às\s+(\d+):(\d+))?/);
+    if (!match) return new Date(2026, 5, 30).getTime();
+
+    const day = parseInt(match[1], 10);
+    const monthStr = match[2];
+    const hour = match[3] ? parseInt(match[3], 10) : 0;
+    const minute = match[4] ? parseInt(match[4], 10) : 0;
+
+    const month = monthStr.startsWith("jun") ? 5 : 6;
+    return new Date(2026, month, day, hour, minute).getTime();
+  };
+
+  // Próximos 3 jogos (considerando apenas a data em relação ao momento atual)
+  const next3Matches = useMemo(() => {
+    const nowTime = new Date().getTime();
+    const upcoming = ALL_MATCHES.filter((match) => {
+      return parseMatchDate(match.scheduled || "") >= nowTime;
+    });
+
+    // Ordena cronologicamente por data + horário
+    const sorted = [...upcoming].sort((a, b) => {
+      return parseMatchDate(a.scheduled || "") - parseMatchDate(b.scheduled || "");
+    });
+
+    return sorted.slice(0, 3);
+  }, []);
+
+  // Jogos que já passaram (possuem resultado oficial lançados) ordenados por data + horário
+  const playedMatches = useMemo(() => {
+    if (!officialResults) return [];
+
+    const played = ALL_MATCHES.filter((match) => {
+      const res = officialResults.scores[match.id];
+      return res && res.home.trim() !== "" && res.away.trim() !== "";
+    });
+
+    // Ordena cronologicamente por data + horário
+    return [...played].sort((a, b) => {
+      return parseMatchDate(a.scheduled || "") - parseMatchDate(b.scheduled || "");
+    });
+  }, [officialResults]);
+
+  if (loading) {
+    return (
+      <div className="main" style={{ textAlign: "center", padding: "4rem 0" }}>
+        <p>Carregando dados da liga...</p>
+      </div>
+    );
+  }
+
+  if (error || !league) {
+    return (
+      <div className="main">
+        <div className="alert-box alert-box--error" style={{ margin: "2rem auto", maxWidth: "600px" }}>
+          <strong>Erro:</strong>
+          <p>{error || "Liga não encontrada no sistema."}</p>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <Link to="/" className="btn btn-ghost">
+            Voltar para a Página Inicial
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="main">
+      {!isFirebaseConfigured && (
+        <div className="alert-box alert-box--warning">
+          <strong>ℹ️ Modo de Teste Local Ativo:</strong>
+          <p>Esta liga está rodando em modo mock (LocalStorage). Para salvar no banco em nuvem, configure o Firebase.</p>
+        </div>
+      )}
+
+      {/* Info Bar da Liga */}
+      <div className="league-info-bar">
+        <div className="league-info-details">
+          <h2>{league.name}</h2>
+          <div className="league-info-meta">
+            <span>Criador: <strong>{league.creatorName}</strong></span>
+          </div>
+          <div className="rules-list">
+            <span
+              className="rules-badge"
+              data-tooltip="Acertou o placar exato da partida (ex: palpite 2x1, placar oficial 2x1)."
+            >
+              Acertar Placar: <strong>+{league.rules.exact} pts</strong> <span>ℹ️</span>
+            </span>
+            <span
+              className="rules-badge"
+              data-tooltip="Errou o placar exato, mas acertou o vencedor ou o empate (ex: palpite 3x1, placar oficial 1x0)."
+            >
+              Acertar Resultado: <strong>+{league.rules.result} pts</strong> <span>ℹ️</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="league-info-action">
+          {deadlinePassed ? (
+            <span
+              className="badge"
+              style={{
+                background: "rgba(248, 113, 113, 0.15)",
+                color: "var(--danger)",
+                padding: "0.6rem 1rem",
+                borderRadius: "8px",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                border: "1px solid rgba(248, 113, 113, 0.3)",
+              }}
+            >
+              🔒 Inscrições Encerradas
+            </span>
+          ) : (
+            <Link to={`/league/${league.id}/fill`} className="btn btn-primary" style={{ padding: "0.75rem 1.5rem" }}>
+              Participar do Bolão / Inserir Palpites
+            </Link>
+          )}
+        </div>
+      </div>
+      <div className="dashboard-layout">
+        {/* Próximos 3 Jogos e Matriz de Palpites */}
+        <div className="dashboard-panel panel-upcoming" style={{ overflow: "hidden" }}>
+          <h3 className="dashboard-panel-title">Próximos 3 Jogos & Palpites</h3>
+          <p className="form-helper" style={{ marginBottom: "1rem" }}>
+            Acompanhe o palpite de cada participante para as próximas partidas da Copa.
+          </p>
+
+          {participants.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "2rem 1rem", color: "var(--muted)" }}>
+              Nenhum palpite enviado ainda nesta liga.
+            </div>
+          ) : (
+            <div className="matrix-table-wrapper">
+              <table className="matrix-table">
+                <thead>
+                  <tr>
+                    <th className="col-name">Participante</th>
+                    {next3Matches.map((match) => (
+                      <th key={match.id} className="matrix-match-header">
+                        {match.home.name} x {match.away.name}
+                        <span className="matrix-match-flag">{match.group} • {match.scheduled}</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {participants.map((p) => (
+                    <tr key={p.id}>
+                      <td className="col-name">
+                        <Link to={`/league/${league.id}/${p.id}`} className="col-link">
+                          {p.nickname}
+                        </Link>
+                      </td>
+                      {next3Matches.map((match) => {
+                        const pred = p.scores[match.id];
+                        const displayScore =
+                          pred && pred.home !== "" && pred.away !== ""
+                            ? `${pred.home} x ${pred.away}`
+                            : "-";
+                        return (
+                          <td key={match.id}>
+                            <span className="matrix-score-cell">{displayScore}</span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Tabela de Classificação */}
+        <div className="dashboard-panel panel-standings">
+          <h3 className="dashboard-panel-title">Tabela de Classificação</h3>
+
+          {rankedParticipants.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "3rem 1.5rem" }}>
+              <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
+                Ainda não há nenhum participante cadastrado nesta liga.
+              </p>
+              {!deadlinePassed && (
+                <Link to={`/league/${league.id}/fill`} className="btn btn-primary">
+                  Ser o Primeiro a Participar!
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="standings-wrap">
+              <table className="standings-table">
+                <thead>
+                  <tr>
+                    <th className="col-pos">Pos</th>
+                    <th className="col-team" style={{ paddingLeft: "1rem" }}>Apelido</th>
+                    <th>Pontos</th>
+                    <th>Placar</th>
+                    <th>Resultado</th>
+                    <th>Palpites</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rankedParticipants.map((p, index) => {
+                    // Conta quantos palpites foram totalmente preenchidos
+                    const predictionsCount = Object.values(p.scores).filter(
+                      (s) => s.home.trim() !== "" && s.away.trim() !== "",
+                    ).length;
+
+                    return (
+                      <tr key={p.id}>
+                        <td className="col-pos">{index + 1}º</td>
+                        <td className="col-team" style={{ paddingLeft: "1rem" }}>
+                          <Link to={`/league/${league.id}/${p.id}`} className="col-link">
+                            {p.nickname}
+                          </Link>
+                        </td>
+                        <td className="col-pts" style={{ fontSize: "1rem", color: "var(--accent)" }}>
+                          {p.totalPoints} pts
+                        </td>
+                        <td style={{ fontWeight: 600, color: "var(--accent)", fontSize: "0.9rem" }}>
+                          {p.exactHits}
+                        </td>
+                        <td style={{ fontWeight: 600, color: "#60a5fa", fontSize: "0.9rem" }}>
+                          {p.resultHits}
+                        </td>
+                        <td style={{ color: "var(--muted)" }}>
+                          {predictionsCount} / {ALL_MATCHES.length}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Jogos Realizados & Histórico de Palpites */}
+        {participants.length > 0 && (
+          <div className="dashboard-panel panel-past" style={{ overflow: "hidden" }}>
+            <h3 className="dashboard-panel-title">Jogos Realizados & Histórico de Palpites</h3>
+            <p className="form-helper" style={{ marginBottom: "1rem" }}>
+              Histórico de todos os jogos finalizados. As cores indicam: <span style={{ color: "var(--accent)", fontWeight: "bold" }}>Exato</span> (acertou o placar), <span style={{ color: "#60a5fa", fontWeight: "bold" }}>Resultado</span> (acertou o vencedor/empate) ou <span style={{ color: "var(--danger)", fontWeight: "bold" }}>Erro</span>.
+            </p>
+
+            {playedMatches.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--muted)" }}>
+                Nenhum jogo finalizado com resultados oficiais cadastrados ainda.
+              </div>
+            ) : (
+              <div className="matrix-table-wrapper">
+                <table className="matrix-table">
+                  <thead>
+                    <tr>
+                      <th className="col-name">Participante</th>
+                      {playedMatches.map((match) => {
+                        const official = officialResults!.scores[match.id];
+                        return (
+                          <th key={match.id} className="matrix-match-header">
+                            {match.home.name} x {match.away.name}
+                            <span className="matrix-match-flag" style={{ color: "var(--accent)", fontWeight: "bold" }}>
+                              Oficial: {official.home} x {official.away}
+                            </span>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {participants.map((p) => (
+                      <tr key={p.id}>
+                        <td className="col-name">
+                          <Link to={`/league/${league.id}/${p.id}`} className="col-link">
+                            {p.nickname}
+                          </Link>
+                        </td>
+                        {playedMatches.map((match) => {
+                          const pred = p.scores[match.id];
+                          const official = officialResults!.scores[match.id];
+
+                          // Sem palpite
+                          if (!pred || pred.home.trim() === "" || pred.away.trim() === "") {
+                            return (
+                              <td key={match.id}>
+                                <span className="matrix-score-cell" style={{ opacity: 0.4 }}>-</span>
+                              </td>
+                            );
+                          }
+
+                          // Calcula pontuação
+                          const pts = calculateMatchPoints(
+                            pred.home,
+                            pred.away,
+                            official.home,
+                            official.away,
+                            league.rules,
+                          );
+
+                          let cellStyle = {};
+                          if (pts === league.rules.exact) {
+                            cellStyle = {
+                              background: "rgba(34, 197, 94, 0.15)",
+                              color: "var(--accent)",
+                              border: "1px solid rgba(34, 197, 94, 0.35)",
+                              fontWeight: "bold",
+                            };
+                          } else if (pts === league.rules.result) {
+                            cellStyle = {
+                              background: "rgba(59, 130, 246, 0.15)",
+                              color: "#60a5fa",
+                              border: "1px solid rgba(59, 130, 246, 0.35)",
+                              fontWeight: "bold",
+                            };
+                          } else {
+                            cellStyle = {
+                              background: "rgba(239, 68, 68, 0.08)",
+                              color: "var(--danger)",
+                              border: "1px solid rgba(239, 68, 68, 0.25)",
+                            };
+                          }
+
+                          return (
+                            <td key={match.id}>
+                              <span className="matrix-score-cell" style={cellStyle}>
+                                {pred.home} x {pred.away}
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
