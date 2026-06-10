@@ -3,3 +3,5 @@
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string;
 }
+
+declare module "xlsx-js-style";

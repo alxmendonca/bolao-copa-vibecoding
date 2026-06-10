@@ -12,6 +12,7 @@ import {
 } from "../lib/firebaseService";
 import { rankParticipants, calculateMatchPoints } from "../lib/scoring";
 import { ALL_MATCHES } from "../data/groupStage";
+import { downloadLeagueExcel } from "../lib/exportExcel";
 
 export default function LeagueDetail() {
   const { leagueId } = useParams<{ leagueId: string }>();
@@ -46,6 +47,15 @@ export default function LeagueDetail() {
 
   // Prazo de inscrição/edição expirado?
   const deadlinePassed = isSubmissionDeadlinePassed();
+
+  const handleExportLeague = () => {
+    if (!league || participants.length === 0) return;
+    try {
+      downloadLeagueExcel(league, participants);
+    } catch (err) {
+      alert("Erro ao exportar planilha da liga.");
+    }
+  };
 
   // Calcula classificação geral dos participantes
   const rankedParticipants = useMemo(() => {
@@ -154,7 +164,7 @@ export default function LeagueDetail() {
           </div>
         </div>
 
-        <div className="league-info-action">
+        <div className="league-info-action" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
           {deadlinePassed ? (
             <span
               className="badge"
@@ -166,6 +176,8 @@ export default function LeagueDetail() {
                 fontSize: "0.85rem",
                 fontWeight: 600,
                 border: "1px solid rgba(248, 113, 113, 0.3)",
+                display: "inline-block",
+                textAlign: "center"
               }}
             >
               🔒 Inscrições Encerradas
@@ -175,6 +187,19 @@ export default function LeagueDetail() {
               Participar do Bolão / Inserir Palpites
             </Link>
           )}
+
+          <button
+            onClick={handleExportLeague}
+            className="btn btn-ghost"
+            style={{
+              padding: "0.75rem 1.5rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            📊 Exportar Liga (Excel)
+          </button>
         </div>
       </div>
       <div className="dashboard-layout">
