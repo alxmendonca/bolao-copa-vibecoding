@@ -48,13 +48,35 @@ export function generateUniqueHash(): string {
   return result;
 }
 
-// Verifica se o prazo limite de inscrições/edições (11 de junho às 14:00 Horário de Brasília) expirou.
-// 14:00 BRT (UTC-3) é exatamente 17:00 UTC.
-export function isSubmissionDeadlinePassed(): boolean {
-  const deadline = new Date(Date.UTC(2026, 5, 11, 17, 0, 0)); // Meses em JS são 0-indexed (5 = Junho)
+// Retorna a data limite de inscrições/edições a partir do Firebase ou do localStorage (modo mock).
+export async function getExpiryDate(): Promise<Date> {
+  if (isFirebaseConfigured && db) {
+    try {
+      const snap = await get(ref(db, "settings/expiryDate"));
+      if (snap.exists()) {
+        const val = snap.val();
+        if (val) {
+          return new Date(val);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao obter prazo de expiração do Firebase:", e);
+    }
+  } else {
+    const mockVal = localStorage.getItem("bolao_mock_expiry_date");
+    if (mockVal) return new Date(mockVal);
+  }
+  // Default fallback: hoje às 16:00 BRT (19:00 UTC)
+  return new Date("2026-06-11T16:00:00-03:00");
+}
+
+// Verifica se o prazo limite de inscrições/edições expirou.
+export async function isSubmissionDeadlinePassed(): Promise<boolean> {
+  const deadline = await getExpiryDate();
   const now = new Date();
   return now.getTime() > deadline.getTime();
 }
+
 
 /**
  * MOCK LOCALSTORAGE IMPLEMENTATION (Para rodar localmente sem Firebase configurado)
@@ -177,8 +199,17 @@ export async function joinLeague(
   passwordHash: string,
   scores: Record<string, ScoreInput>,
 ): Promise<string> {
-  if (isSubmissionDeadlinePassed()) {
-    throw new Error("Prazo de envio de palpites encerrado (11 de Junho às 14h BRT).");
+  if (await isSubmissionDeadlinePassed()) {
+    const deadline = await getExpiryDate();
+    const formatted = deadline.toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    throw new Error(`Prazo de envio de palpites encerrado (${formatted} BRT).`);
   }
 
   // Validar se o apelido já existe na liga
@@ -251,8 +282,17 @@ export async function updateParticipantScores(
   passwordHashInput: string,
   scores: Record<string, ScoreInput>,
 ): Promise<void> {
-  if (isSubmissionDeadlinePassed()) {
-    throw new Error("Prazo de edição de palpites encerrado (11 de Junho às 14h BRT).");
+  if (await isSubmissionDeadlinePassed()) {
+    const deadline = await getExpiryDate();
+    const formatted = deadline.toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    throw new Error(`Prazo de edição de palpites encerrado (${formatted} BRT).`);
   }
 
   const p = await getParticipant(leagueId, participantId);

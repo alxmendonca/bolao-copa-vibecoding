@@ -35,18 +35,22 @@ export default function ParticipantDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
+
   const loadData = async () => {
     if (!leagueId || !participantId) return;
     try {
-      const [leagueData, pData, results] = await Promise.all([
+      const [leagueData, pData, results, isPassed] = await Promise.all([
         getLeague(leagueId),
         getParticipant(leagueId, participantId),
         getOfficialResults(),
+        isSubmissionDeadlinePassed(),
       ]);
       setLeague(leagueData);
       setParticipant(pData);
       setScores(pData.scores);
       setOfficialResults(results);
+      setDeadlinePassed(isPassed);
     } catch (err: any) {
       setError(err.message || "Erro ao carregar os palpites.");
     } finally {
@@ -57,8 +61,6 @@ export default function ParticipantDetail() {
   useEffect(() => {
     loadData();
   }, [leagueId, participantId]);
-
-  const deadlinePassed = isSubmissionDeadlinePassed();
 
   // Calcula pontuação total do participante
   const totalPoints = useMemo(() => {

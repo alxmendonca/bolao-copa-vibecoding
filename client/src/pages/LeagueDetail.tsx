@@ -22,19 +22,23 @@ export default function LeagueDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
+
   useEffect(() => {
     if (!leagueId) return;
 
     const loadData = async () => {
       try {
-        const [leagueData, participantsList, results] = await Promise.all([
+        const [leagueData, participantsList, results, isPassed] = await Promise.all([
           getLeague(leagueId),
           getParticipants(leagueId),
           getOfficialResults(),
+          isSubmissionDeadlinePassed(),
         ]);
         setLeague(leagueData);
         setParticipants(participantsList);
         setOfficialResults(results);
+        setDeadlinePassed(isPassed);
       } catch (err: any) {
         setError(err.message || "Erro ao carregar dados da liga.");
       } finally {
@@ -44,9 +48,6 @@ export default function LeagueDetail() {
 
     loadData();
   }, [leagueId]);
-
-  // Prazo de inscrição/edição expirado?
-  const deadlinePassed = isSubmissionDeadlinePassed();
 
   const handleExportLeague = () => {
     if (!league || participants.length === 0) return;

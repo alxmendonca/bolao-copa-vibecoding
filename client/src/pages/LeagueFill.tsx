@@ -40,13 +40,19 @@ export default function LeagueFill() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
+
   useEffect(() => {
     if (!leagueId) return;
 
     const loadLeague = async () => {
       try {
-        const l = await getLeague(leagueId);
+        const [l, isPassed] = await Promise.all([
+          getLeague(leagueId),
+          isSubmissionDeadlinePassed(),
+        ]);
         setLeague(l);
+        setDeadlinePassed(isPassed);
       } catch (err: any) {
         setError(err.message || "Erro ao carregar dados da liga.");
       } finally {
@@ -56,8 +62,6 @@ export default function LeagueFill() {
 
     loadLeague();
   }, [leagueId]);
-
-  const deadlinePassed = isSubmissionDeadlinePassed();
 
   const onScoreChange = useCallback(
     (matchId: string, field: "home" | "away", value: string) => {
