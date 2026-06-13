@@ -2,7 +2,7 @@ import { useRef } from "react";
 import type { MatchDef } from "../data/groupStage";
 import type { ScoreInput } from "../lib/standings";
 import { validateScoreField } from "../lib/standings";
-import { calculateMatchPoints } from "../lib/scoring";
+import { calculateMatchPoints, parseMatchDate } from "../lib/scoring";
 
 type Props = {
   match: MatchDef;
@@ -54,6 +54,12 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
     score.away.trim() !== ""
   );
 
+  const now = new Date().getTime();
+  const matchDate = match.scheduled ? parseMatchDate(match.scheduled) : 0;
+  const isLive = match.scheduled
+    ? matchDate < now && matchDate >= now - (2 * 60 + 20) * 60 * 1000
+    : false;
+
   let statusClass = "";
   let pointsLabel = "";
 
@@ -83,10 +89,53 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
     }
   }
 
+  const isStarted = match.scheduled ? matchDate < now : false;
+
   return (
     <div className={`match-row${statusClass}`}>
       {match.scheduled ? (
-        <div className="match-meta">{match.scheduled}</div>
+        <div className="match-meta" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span>{match.scheduled}</span>
+          {isLive ? (
+            <span
+              className="badge-live"
+              style={{
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#f87171",
+                padding: "0.1rem 0.4rem",
+                borderRadius: "4px",
+                fontSize: "0.65rem",
+                fontWeight: "bold",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.2rem",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                textTransform: "none"
+              }}
+            >
+              <span className="live-dot" style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#ef4444", display: "inline-block" }}></span>
+              EM ANDAMENTO
+            </span>
+          ) : isStarted ? (
+            <span
+              className="badge-started"
+              style={{
+                background: "rgba(255, 255, 255, 0.05)",
+                color: "var(--muted)",
+                padding: "0.1rem 0.4rem",
+                borderRadius: "4px",
+                fontSize: "0.65rem",
+                fontWeight: "bold",
+                display: "inline-flex",
+                alignItems: "center",
+                border: "1px solid var(--border)",
+                textTransform: "none"
+              }}
+            >
+              🔒 Iniciado
+            </span>
+          ) : null}
+        </div>
       ) : null}
       <div className="match-teams">
         <span className="team-name home">{match.home.name}</span>
@@ -100,7 +149,7 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
             value={score.home}
             onChange={handleHomeChange}
             placeholder="—"
-            disabled={disabled}
+            disabled={disabled || isStarted}
           />
           <span className="score-x">×</span>
           <input
@@ -113,7 +162,7 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
             value={score.away}
             onChange={handleAwayChange}
             placeholder="—"
-            disabled={disabled}
+            disabled={disabled || isStarted}
           />
         </div>
         <span className="team-name away">{match.away.name}</span>

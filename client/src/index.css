@@ -1137,5 +1137,28 @@ a {
   transform: translateX(-50%) scale(1);
 }
 
+/* Live badge and pulse animation */
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    opacity: 0.5;
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    opacity: 0.5;
+  }
+}
+
+.live-dot {
+  animation: pulse 1.8s infinite ease-in-out;
+}
+
 
 

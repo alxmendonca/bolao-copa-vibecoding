@@ -6,6 +6,8 @@ import {
   update,
 } from "firebase/database";
 import type { ScoreInput } from "./standings";
+import { ALL_MATCHES } from "../data/groupStage";
+import { parseMatchDate } from "./scoring";
 
 export { isFirebaseConfigured };
 
@@ -220,13 +222,23 @@ export async function joinLeague(
     throw new Error("Esse apelido já está cadastrado nesta liga. Escolha outro!");
   }
 
+  // Desabilita palpites para jogos que já começaram
+  const now = new Date().getTime();
+  const sanitizedScores = { ...scores };
+  for (const match of ALL_MATCHES) {
+    const matchDate = match.scheduled ? parseMatchDate(match.scheduled) : 0;
+    if (matchDate > 0 && matchDate < now) {
+      sanitizedScores[match.id] = { home: "", away: "" };
+    }
+  }
+
   const participantId = generateUniqueHash();
   const newParticipant: Participant = {
     id: participantId,
     name: name.trim(),
     nickname: nickname.trim(),
     passwordHash,
-    scores,
+    scores: sanitizedScores,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -300,15 +312,25 @@ export async function updateParticipantScores(
     throw new Error("Senha de Edição incorreta!");
   }
 
+  // Restaura os palpites originais para jogos que já começaram
+  const now = new Date().getTime();
+  const sanitizedScores = { ...scores };
+  for (const match of ALL_MATCHES) {
+    const matchDate = match.scheduled ? parseMatchDate(match.scheduled) : 0;
+    if (matchDate > 0 && matchDate < now) {
+      sanitizedScores[match.id] = p.scores[match.id] || { home: "", away: "" };
+    }
+  }
+
   if (isFirebaseConfigured && db) {
     await update(ref(db, `leagues/${leagueId}/participants/${participantId}`), {
-      scores,
+      scores: sanitizedScores,
       updatedAt: new Date().toISOString(),
     });
   } else {
     const updatedParticipant = {
       ...p,
-      scores,
+      scores: sanitizedScores,
       updatedAt: new Date().toISOString(),
     };
     saveMockParticipant(leagueId, updatedParticipant);

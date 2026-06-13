@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   getLeague,
@@ -10,7 +10,7 @@ import {
   type Participant,
   type OfficialResults,
 } from "../lib/firebaseService";
-import { rankParticipants, calculateMatchPoints } from "../lib/scoring";
+import { rankParticipants, calculateMatchPoints, parseMatchDate } from "../lib/scoring";
 import { ALL_MATCHES } from "../data/groupStage";
 import { downloadLeagueExcel } from "../lib/exportExcel";
 
@@ -23,30 +23,58 @@ export default function LeagueDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const [deadlinePassed, setDeadlinePassed] = useState(false);
+  const [currentTime, setCurrentTime] = useState(() => new Date().getTime());
 
+  const loadData = useCallback(async () => {
+    if (!leagueId) return;
+    try {
+      const [leagueData, participantsList, results, isPassed] = await Promise.all([
+        getLeague(leagueId),
+        getParticipants(leagueId),
+        getOfficialResults(),
+        isSubmissionDeadlinePassed(),
+      ]);
+      setLeague(leagueData);
+      setParticipants(participantsList);
+      setOfficialResults(results);
+      setDeadlinePassed(isPassed);
+    } catch (err: any) {
+      setError(err.message || "Erro ao carregar dados da liga.");
+    } finally {
+      setLoading(false);
+    }
+  }, [leagueId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Atualiza o relógio interno a cada 15 segundos
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().getTime());
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Atualização em segundo plano dos resultados e palpites a cada 30 segundos
   useEffect(() => {
     if (!leagueId) return;
 
-    const loadData = async () => {
+    const pollInterval = setInterval(async () => {
       try {
-        const [leagueData, participantsList, results, isPassed] = await Promise.all([
-          getLeague(leagueId),
-          getParticipants(leagueId),
+        const [results, participantsList] = await Promise.all([
           getOfficialResults(),
-          isSubmissionDeadlinePassed(),
+          getParticipants(leagueId),
         ]);
-        setLeague(leagueData);
-        setParticipants(participantsList);
         setOfficialResults(results);
-        setDeadlinePassed(isPassed);
-      } catch (err: any) {
-        setError(err.message || "Erro ao carregar dados da liga.");
-      } finally {
-        setLoading(false);
+        setParticipants(participantsList);
+      } catch (err) {
+        console.error("Erro na atualização em segundo plano:", err);
       }
-    };
+    }, 30000);
 
-    loadData();
+    return () => clearInterval(pollInterval);
   }, [leagueId]);
 
   const handleExportLeague = () => {
@@ -64,26 +92,11 @@ export default function LeagueDetail() {
     return rankParticipants(participants, officialResults.scores, league.rules);
   }, [league, participants, officialResults]);
 
-  // Helper para analisar a data e hora do jogo (ex: "11 de jun às 16:00")
-  const parseMatchDate = (scheduledStr: string): number => {
-    const cleaned = (scheduledStr || "").trim().toLowerCase();
-    const match = cleaned.match(/(\d+)\s+de\s+(\w+)(?:\s+às\s+(\d+):(\d+))?/);
-    if (!match) return new Date(2026, 5, 30).getTime();
-
-    const day = parseInt(match[1], 10);
-    const monthStr = match[2];
-    const hour = match[3] ? parseInt(match[3], 10) : 0;
-    const minute = match[4] ? parseInt(match[4], 10) : 0;
-
-    const month = monthStr.startsWith("jun") ? 5 : 6;
-    return new Date(2026, month, day, hour, minute).getTime();
-  };
-
-  // Próximos 3 jogos (considerando apenas a data em relação ao momento atual)
+  // Próximos 3 jogos (considerando a data em relação ao momento atual e o delay de 2:20)
   const next3Matches = useMemo(() => {
-    const nowTime = new Date().getTime();
+    const limitTime = currentTime - (2 * 60 + 20) * 60 * 1000; // 2 horas e 20 minutos de tolerância
     const upcoming = ALL_MATCHES.filter((match) => {
-      return parseMatchDate(match.scheduled || "") >= nowTime;
+      return parseMatchDate(match.scheduled || "") >= limitTime;
     });
 
     // Ordena cronologicamente por data + horário
@@ -92,7 +105,7 @@ export default function LeagueDetail() {
     });
 
     return sorted.slice(0, 3);
-  }, []);
+  }, [currentTime]);
 
   // Jogos que já passaram (possuem resultado oficial lançados) ordenados por data + horário
   const playedMatches = useMemo(() => {
@@ -221,12 +234,35 @@ export default function LeagueDetail() {
                 <thead>
                   <tr>
                     <th className="col-name">Participante</th>
-                    {next3Matches.map((match) => (
-                      <th key={match.id} className="matrix-match-header">
-                        {match.home.name} x {match.away.name}
-                        <span className="matrix-match-flag">{match.group} • {match.scheduled}</span>
-                      </th>
-                    ))}
+                    {next3Matches.map((match) => {
+                      const matchDate = parseMatchDate(match.scheduled || "");
+                      const isLive = matchDate < currentTime && matchDate >= currentTime - (2 * 60 + 20) * 60 * 1000;
+
+                      return (
+                        <th key={match.id} className="matrix-match-header" style={isLive ? { border: "1px solid rgba(239, 68, 68, 0.4)", background: "rgba(239, 68, 68, 0.05)" } : {}}>
+                          <div>{match.home.name} x {match.away.name}</div>
+                          {isLive ? (
+                            <span
+                              className="matrix-match-flag"
+                              style={{
+                                color: "var(--danger)",
+                                fontWeight: "bold",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "0.25rem",
+                                marginTop: "0.2rem"
+                              }}
+                            >
+                              <span className="live-dot" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444", display: "inline-block" }}></span>
+                              JOGO EM ANDAMENTO
+                            </span>
+                          ) : (
+                            <span className="matrix-match-flag">{match.group} • {match.scheduled}</span>
+                          )}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
