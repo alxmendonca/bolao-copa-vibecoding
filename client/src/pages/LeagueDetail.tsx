@@ -96,6 +96,11 @@ export default function LeagueDetail() {
   const next3Matches = useMemo(() => {
     const limitTime = currentTime - (2 * 60 + 20) * 60 * 1000; // 2 horas e 20 minutos de tolerância
     const upcoming = ALL_MATCHES.filter((match) => {
+      // Se já tiver placar oficial cadastrado, considera finalizado (remove de next3Matches)
+      const res = officialResults?.scores[match.id];
+      const hasOfficial = res && res.home.trim() !== "" && res.away.trim() !== "";
+      if (hasOfficial) return false;
+
       return parseMatchDate(match.scheduled || "") >= limitTime;
     });
 
@@ -105,7 +110,7 @@ export default function LeagueDetail() {
     });
 
     return sorted.slice(0, 3);
-  }, [currentTime]);
+  }, [currentTime, officialResults]);
 
   // Jogos que já passaram (possuem resultado oficial lançados) ordenados por data + horário
   const playedMatches = useMemo(() => {
@@ -236,7 +241,9 @@ export default function LeagueDetail() {
                     <th className="col-name">Participante</th>
                     {next3Matches.map((match) => {
                       const matchDate = parseMatchDate(match.scheduled || "");
-                      const isLive = matchDate < currentTime && matchDate >= currentTime - (2 * 60 + 20) * 60 * 1000;
+                      const res = officialResults?.scores[match.id];
+                      const hasOfficial = res && res.home.trim() !== "" && res.away.trim() !== "";
+                      const isLive = matchDate < currentTime && matchDate >= currentTime - (2 * 60 + 20) * 60 * 1000 && !hasOfficial;
 
                       return (
                         <th key={match.id} className="matrix-match-header" style={isLive ? { border: "1px solid rgba(239, 68, 68, 0.4)", background: "rgba(239, 68, 68, 0.05)" } : {}}>

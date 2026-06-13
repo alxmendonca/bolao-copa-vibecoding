@@ -57,7 +57,7 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
   const now = new Date().getTime();
   const matchDate = match.scheduled ? parseMatchDate(match.scheduled) : 0;
   const isLive = match.scheduled
-    ? matchDate < now && matchDate >= now - (2 * 60 + 20) * 60 * 1000
+    ? matchDate < now && matchDate >= now - (2 * 60 + 20) * 60 * 1000 && !hasOfficial
     : false;
 
   let statusClass = "";
