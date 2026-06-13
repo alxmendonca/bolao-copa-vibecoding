@@ -13,6 +13,24 @@ import {
 import { rankParticipants, calculateMatchPoints, parseMatchDate } from "../lib/scoring";
 import { ALL_MATCHES } from "../data/groupStage";
 import { downloadLeagueExcel } from "../lib/exportExcel";
+import html2canvas from "html2canvas";
+
+// Helper para verificar se a partida é hoje
+const isMatchToday = (scheduledStr: string, currentTimestamp: number): boolean => {
+  const d = new Date(currentTimestamp);
+  const day = d.getDate();
+  const month = d.getMonth(); // 5 = Jun, 6 = Jul
+  
+  const cleaned = (scheduledStr || "").trim().toLowerCase();
+  const match = cleaned.match(/(\d+)\s+de\s+(\w+)/);
+  if (!match) return false;
+  
+  const matchDay = parseInt(match[1], 10);
+  const matchMonthStr = match[2];
+  const matchMonth = matchMonthStr.startsWith("jun") ? 5 : 6;
+  
+  return day === matchDay && month === matchMonth;
+};
 
 export default function LeagueDetail() {
   const { leagueId } = useParams<{ leagueId: string }>();
@@ -24,6 +42,7 @@ export default function LeagueDetail() {
 
   const [deadlinePassed, setDeadlinePassed] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => new Date().getTime());
+  const [matchViewMode, setMatchViewMode] = useState<"next3" | "today">("next3");
 
   const loadData = useCallback(async () => {
     if (!leagueId) return;
@@ -112,6 +131,20 @@ export default function LeagueDetail() {
     return sorted.slice(0, 3);
   }, [currentTime, officialResults]);
 
+  // Jogos selecionados com base no toggle (Próximos 3 ou Jogos de Hoje)
+  const selectedMatches = useMemo(() => {
+    if (matchViewMode === "next3") {
+      return next3Matches;
+    } else {
+      const todayMatches = ALL_MATCHES.filter((match) => {
+        return isMatchToday(match.scheduled || "", currentTime);
+      });
+      return [...todayMatches].sort((a, b) => {
+        return parseMatchDate(a.scheduled || "") - parseMatchDate(b.scheduled || "");
+      });
+    }
+  }, [matchViewMode, next3Matches, currentTime]);
+
   // Jogos que já passaram (possuem resultado oficial lançados) ordenados por data + horário
   const playedMatches = useMemo(() => {
     if (!officialResults) return [];
@@ -126,6 +159,31 @@ export default function LeagueDetail() {
       return parseMatchDate(a.scheduled || "") - parseMatchDate(b.scheduled || "");
     });
   }, [officialResults]);
+
+  const handleDownloadImage = async () => {
+    const element = document.getElementById("matrix-capture-area");
+    if (!element) return;
+
+    try {
+      const canvas = await html2canvas(element, {
+        backgroundColor: "#141c28", // Corresponde à cor de fundo da tabela/card
+        scale: 2, // Melhora a resolução da imagem para compartilhamento
+        logging: false,
+        useCORS: true,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      const titleClean = (league?.name || "bolao").trim().toLowerCase().replace(/\s+/g, "-");
+      const modeClean = matchViewMode === "next3" ? "proximos-jogos" : "jogos-de-hoje";
+      link.download = `palpites-${titleClean}-${modeClean}.png`;
+      link.href = imgData;
+      link.click();
+    } catch (err) {
+      console.error("Erro ao gerar imagem:", err);
+      alert("Erro ao gerar imagem para download.");
+    }
+  };
 
   if (loading) {
     return (
@@ -224,22 +282,98 @@ export default function LeagueDetail() {
       <div className="dashboard-layout">
         {/* Próximos 3 Jogos e Matriz de Palpites */}
         <div className="dashboard-panel panel-upcoming" style={{ overflow: "hidden" }}>
-          <h3 className="dashboard-panel-title">Próximos 3 Jogos & Palpites</h3>
-          <p className="form-helper" style={{ marginBottom: "1rem" }}>
-            Acompanhe o palpite de cada participante para as próximas partidas da Copa.
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "0.5rem" }}>
+            <div>
+              <h3 className="dashboard-panel-title" style={{ margin: 0 }}>
+                {matchViewMode === "next3" ? "Próximos 3 Jogos & Palpites" : "Jogos de Hoje & Palpites"}
+              </h3>
+              <p className="form-helper" style={{ margin: "0.25rem 0 0" }}>
+                Acompanhe o palpite de cada participante para as partidas da Copa.
+              </p>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", background: "var(--bg-elevated)", padding: "0.25rem", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setMatchViewMode("next3")}
+                  style={{
+                    padding: "0.4rem 0.85rem",
+                    fontSize: "0.8rem",
+                    borderRadius: "6px",
+                    height: "auto",
+                    border: "none",
+                    background: matchViewMode === "next3" ? "var(--accent)" : "transparent",
+                    color: matchViewMode === "next3" ? "#000" : "var(--text)",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  Próximos 3 Jogos
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setMatchViewMode("today")}
+                  style={{
+                    padding: "0.4rem 0.85rem",
+                    fontSize: "0.8rem",
+                    borderRadius: "6px",
+                    height: "auto",
+                    border: "none",
+                    background: matchViewMode === "today" ? "var(--accent)" : "transparent",
+                    color: matchViewMode === "today" ? "#000" : "var(--text)",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  Jogos de Hoje
+                </button>
+              </div>
+
+              {selectedMatches.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={handleDownloadImage}
+                  style={{
+                    padding: "0.4rem 0.85rem",
+                    fontSize: "0.8rem",
+                    borderRadius: "8px",
+                    height: "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    borderColor: "var(--border)",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    background: "rgba(255, 255, 255, 0.03)",
+                  }}
+                >
+                  📸 Baixar Palpites (Imagem)
+                </button>
+              )}
+            </div>
+          </div>
 
           {participants.length === 0 ? (
             <div style={{ textAlign: "center", padding: "2rem 1rem", color: "var(--muted)" }}>
               Nenhum palpite enviado ainda nesta liga.
             </div>
+          ) : selectedMatches.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--muted)", border: "1px dashed var(--border)", borderRadius: "8px", marginTop: "1rem" }}>
+              {matchViewMode === "today" ? "Nenhum jogo agendado para hoje." : "Nenhum jogo próximo encontrado."}
+            </div>
           ) : (
-            <div className="matrix-table-wrapper">
+            <div id="matrix-capture-area" className="matrix-table-wrapper" style={{ marginTop: "1rem", padding: "0.75rem", borderRadius: "8px", background: "var(--bg-elevated)" }}>
               <table className="matrix-table">
                 <thead>
                   <tr>
                     <th className="col-name">Participante</th>
-                    {next3Matches.map((match) => {
+                    {selectedMatches.map((match) => {
                       const matchDate = parseMatchDate(match.scheduled || "");
                       const res = officialResults?.scores[match.id];
                       const hasOfficial = res && res.home.trim() !== "" && res.away.trim() !== "";
@@ -280,7 +414,7 @@ export default function LeagueDetail() {
                           {p.nickname}
                         </Link>
                       </td>
-                      {next3Matches.map((match) => {
+                      {selectedMatches.map((match) => {
                         const pred = p.scores[match.id];
                         const displayScore =
                           pred && pred.home !== "" && pred.away !== ""
