@@ -164,12 +164,49 @@ export default function LeagueDetail() {
     const element = document.getElementById("matrix-capture-area");
     if (!element) return;
 
+    // Guardar estilos originais do wrapper
+    const originalWidth = element.style.width;
+    const originalMaxWidth = element.style.maxWidth;
+    const originalOverflow = element.style.overflow;
+    const originalOverflowX = element.style.overflowX;
+
+    // Buscar células "sticky" para desativar temporariamente o sticky (evita bugs no html2canvas)
+    const stickyCells = element.querySelectorAll(".col-name") as NodeListOf<HTMLElement>;
+
     try {
+      const table = element.querySelector(".matrix-table") as HTMLElement;
+      const fullWidth = table ? table.scrollWidth : element.scrollWidth;
+
+      // Ajustar estilos temporariamente para renderizar toda a largura
+      element.style.width = `${fullWidth + 24}px`; // Largura total da tabela + margens do wrapper
+      element.style.maxWidth = "none";
+      element.style.overflow = "visible";
+      element.style.overflowX = "visible";
+
+      // Desativar posição sticky temporariamente
+      stickyCells.forEach((cell) => {
+        cell.style.position = "static";
+      });
+
       const canvas = await html2canvas(element, {
-        backgroundColor: "#141c28", // Corresponde à cor de fundo da tabela/card
-        scale: 2, // Melhora a resolução da imagem para compartilhamento
+        backgroundColor: "#141c28", // Fundo correspondente
+        scale: 2, // Resolução duplicada para melhor legibilidade ao compartilhar
         logging: false,
         useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: fullWidth + 100, // Força janela virtual mais larga
+      });
+
+      // Restaurar estilos originais do wrapper
+      element.style.width = originalWidth;
+      element.style.maxWidth = originalMaxWidth;
+      element.style.overflow = originalOverflow;
+      element.style.overflowX = originalOverflowX;
+
+      // Restaurar células sticky
+      stickyCells.forEach((cell) => {
+        cell.style.position = "";
       });
 
       const imgData = canvas.toDataURL("image/png");
@@ -180,6 +217,15 @@ export default function LeagueDetail() {
       link.href = imgData;
       link.click();
     } catch (err) {
+      // Garantir restauração mesmo em caso de erro
+      element.style.width = originalWidth;
+      element.style.maxWidth = originalMaxWidth;
+      element.style.overflow = originalOverflow;
+      element.style.overflowX = originalOverflowX;
+      stickyCells.forEach((cell) => {
+        cell.style.position = "";
+      });
+
       console.error("Erro ao gerar imagem:", err);
       alert("Erro ao gerar imagem para download.");
     }
