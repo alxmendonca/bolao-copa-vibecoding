@@ -11,6 +11,7 @@ type Props = {
   disabled?: boolean;
   officialScore?: ScoreInput;
   rules?: { exact: number; result: number };
+  isAdmin?: boolean;
 };
 
 function focusNextInput(current: HTMLInputElement): void {
@@ -23,7 +24,7 @@ function focusNextInput(current: HTMLInputElement): void {
   }
 }
 
-export function MatchRow({ match, score, onChange, disabled, officialScore, rules }: Props) {
+export function MatchRow({ match, score, onChange, disabled, officialScore, rules, isAdmin }: Props) {
   const awayRef = useRef<HTMLInputElement>(null);
 
   const homeOk = validateScoreField(score.home);
@@ -90,6 +91,7 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
   }
 
   const isStarted = match.scheduled ? matchDate < now : false;
+  const shouldLock = isStarted && !isAdmin;
 
   return (
     <div className={`match-row${statusClass}`}>
@@ -116,7 +118,7 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
               <span className="live-dot" style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#ef4444", display: "inline-block" }}></span>
               EM ANDAMENTO
             </span>
-          ) : isStarted ? (
+          ) : shouldLock ? (
             <span
               className="badge-started"
               style={{
@@ -149,7 +151,7 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
             value={score.home}
             onChange={handleHomeChange}
             placeholder="—"
-            disabled={disabled || isStarted}
+            disabled={disabled || shouldLock}
           />
           <span className="score-x">×</span>
           <input
@@ -162,7 +164,7 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
             value={score.away}
             onChange={handleAwayChange}
             placeholder="—"
-            disabled={disabled || isStarted}
+            disabled={disabled || shouldLock}
           />
         </div>
         <span className="team-name away">{match.away.name}</span>

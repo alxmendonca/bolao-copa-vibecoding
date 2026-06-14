@@ -15,6 +15,7 @@ type Props = {
   disabled?: boolean;
   officialScores?: Record<string, ScoreInput>;
   rules?: { exact: number; result: number };
+  isAdmin?: boolean;
 };
 
 export function GroupSection({
@@ -24,6 +25,7 @@ export function GroupSection({
   disabled,
   officialScores,
   rules,
+  isAdmin,
 }: Props) {
   const standings = computeGroupStandings(group.teams, group.matches, scores);
 
@@ -48,6 +50,7 @@ export function GroupSection({
                   disabled={disabled}
                   officialScore={officialScores?.[m.id]}
                   rules={rules}
+                  isAdmin={isAdmin}
                 />
               </li>
             ))}

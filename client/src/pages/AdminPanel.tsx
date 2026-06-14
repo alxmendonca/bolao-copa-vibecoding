@@ -250,6 +250,7 @@ export default function AdminPanel() {
                 group={g}
                 scores={scores}
                 onScoreChange={onScoreChange}
+                isAdmin={true}
               />
             ))}
           </div>
