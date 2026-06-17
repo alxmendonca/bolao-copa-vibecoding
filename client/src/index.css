@@ -268,18 +268,47 @@ a {
   letter-spacing: 0.04em;
 }
 
+.standings-table .col-pos {
+  font-weight: 700;
+  width: 2.5rem;
+  min-width: 2.5rem;
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+  z-index: 5;
+}
+
 .standings-table .col-team {
   text-align: left;
-  min-width: 5.5rem;
+  min-width: 6.5rem;
+  max-width: 8.5rem;
+  position: sticky;
+  left: 2.5rem;
+  background: var(--bg-card);
+  z-index: 5;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.standings-table .col-team a {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .standings-table .col-pts {
   font-weight: 700;
 }
 
-.standings-table .col-pos {
-  font-weight: 700;
-  width: 2rem;
+.standings-table tr:hover td.col-pos,
+.standings-table tr:hover td.col-team,
+.standings-table tr.standings-row--qualified td.col-pos,
+.standings-table tr.standings-row--qualified td.col-team {
+  background: inherit;
 }
 
 .standings-row--qualified {
@@ -688,6 +717,38 @@ a {
     min-width: 6.5rem;
     padding-inline: 1.25rem;
   }
+
+  /* Responsividade do Painel de Liga no Mobile */
+  .league-info-bar {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  .league-info-details {
+    min-width: 0;
+    width: 100%;
+  }
+  .league-info-action {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .league-info-action .btn,
+  .league-info-action .badge {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+  .dashboard-panel {
+    padding: 1rem 0.75rem;
+    overflow: hidden;
+    max-width: 100%;
+  }
+  .standings-wrap {
+    overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 @media (min-width: 769px) {
@@ -921,12 +982,12 @@ a {
   width: 100%;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .dashboard-layout {
-    grid-template-columns: 1.6fr 1fr;
+    grid-template-columns: 1.25fr 1fr;
     grid-template-areas:
-      "standings upcoming"
-      "past upcoming";
+      "upcoming standings"
+      "past past";
   }
 }
 
@@ -949,6 +1010,8 @@ a {
   padding: 1.5rem 1.25rem;
   box-shadow: var(--shadow);
   height: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .dashboard-panel-title {
@@ -978,6 +1041,9 @@ a {
   background: var(--bg-elevated);
   width: 100%;
   max-width: 100%;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 20ch;
+  -webkit-overflow-scrolling: touch;
 }
 
 .matrix-table {
@@ -999,6 +1065,11 @@ a {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.matrix-table th:not(.col-name),
+.matrix-table td:not(.col-name) {
+  scroll-snap-align: start;
+}
+
 .matrix-table .col-name {
   text-align: left;
   font-weight: 600;
@@ -1007,7 +1078,19 @@ a {
   background: var(--bg-elevated);
   z-index: 10;
   border-right: 1px solid var(--border);
-  min-width: 100px;
+  width: 20ch;
+  max-width: 20ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matrix-table .col-name a {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .matrix-match-header {
@@ -1160,5 +1243,29 @@ a {
   animation: pulse 1.8s infinite ease-in-out;
 }
 
+/* Container de Scroll Superior */
+.top-scrollbar-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  height: 10px;
+  background: transparent;
+}
 
+.top-scrollbar-container::-webkit-scrollbar {
+  height: 6px;
+}
 
+.top-scrollbar-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+}
+
+.top-scrollbar-container::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.top-scrollbar-container::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
