@@ -790,13 +790,50 @@ export default function LeagueDetail() {
                       (s) => s.home.trim() !== "" && s.away.trim() !== "",
                     ).length;
 
+                    // Cálculo do delta de posições
+                    const currentRank = index + 1;
+                    const previousIndex = previousRankedParticipants.findIndex(prev => prev.id === p.id);
+                    const previousRank = previousIndex !== -1 ? previousIndex + 1 : currentRank;
+                    const rankDelta = previousRank - currentRank;
+
+                    let deltaText = "";
+                    let deltaColor = "";
+                    if (rankDelta > 0) {
+                      deltaText = `▲ ${rankDelta}`;
+                      deltaColor = "#22c55e"; // verde
+                    } else if (rankDelta < 0) {
+                      deltaText = `▼ ${Math.abs(rankDelta)}`;
+                      deltaColor = "#ef4444"; // vermelho
+                    } else {
+                      deltaText = "="; // manteve
+                      deltaColor = "#60a5fa"; // azul
+                    }
+
                     return (
                       <tr key={p.id}>
                         <td className="col-pos">{index + 1}º</td>
                         <td className="col-team" style={{ paddingLeft: "1rem" }}>
-                          <Link to={`/league/${league.id}/${p.id}`} className="col-link">
-                            {p.nickname}
-                          </Link>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <span
+                              style={{
+                                fontSize: "0.7rem",
+                                fontWeight: "bold",
+                                color: deltaColor,
+                                background: "rgba(255, 255, 255, 0.03)",
+                                borderRadius: "4px",
+                                padding: "0.05rem 0.25rem",
+                                border: `1px solid rgba(255, 255, 255, 0.05)`,
+                                minWidth: "24px",
+                                display: "inline-block",
+                                textAlign: "center"
+                              }}
+                            >
+                              {deltaText}
+                            </span>
+                            <Link to={`/league/${league.id}/${p.id}`} className="col-link" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {p.nickname}
+                            </Link>
+                          </div>
                         </td>
                         <td className="col-pts" style={{ fontSize: "1rem", color: "var(--accent)" }}>
                           {p.totalPoints} pts
