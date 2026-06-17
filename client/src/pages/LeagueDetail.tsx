@@ -64,6 +64,17 @@ export default function LeagueDetail() {
   const [upcomingIndex, setUpcomingIndex] = useState(0);
   const [pastIndex, setPastIndex] = useState(0);
 
+  const [hiddenLineIds, setHiddenLineIds] = useState<Record<string, boolean>>({});
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    nickname: string;
+    val: number;
+    label: string;
+    x: number;
+    y: number;
+    color: string;
+    idx: number;
+  } | null>(null);
+
   const loadData = useCallback(async () => {
     if (!leagueId) return;
     try {
@@ -245,6 +256,116 @@ export default function LeagueDetail() {
 
     return rankParticipants(participants, previousScores, league.rules);
   }, [league, participants, officialResults, playedMatches]);
+
+  const chronologicalPlayedMatches = useMemo(() => {
+    return [...playedMatches].reverse();
+  }, [playedMatches]);
+
+  const chartData = useMemo(() => {
+    if (!league || !officialResults || chronologicalPlayedMatches.length === 0 || participants.length === 0) {
+      return { labels: [], lines: [], matches: [] };
+    }
+
+    const participantPointsHistory = participants.map((p) => {
+      const history = [0];
+      let currentPoints = 0;
+
+      chronologicalPlayedMatches.forEach((match) => {
+        const pred = p.scores[match.id];
+        const official = officialResults.scores[match.id];
+        
+        let pts = 0;
+        if (pred && pred.home.trim() !== "" && pred.away.trim() !== "") {
+          pts = calculateMatchPoints(
+            pred.home,
+            pred.away,
+            official.home,
+            official.away,
+            league.rules
+          );
+        }
+        currentPoints += pts;
+        history.push(currentPoints);
+      });
+
+      return {
+        id: p.id,
+        nickname: p.nickname,
+        history,
+        finalPoints: currentPoints
+      };
+    });
+
+    const sortedParticipantsForColors = [...participantPointsHistory].sort((a, b) => b.finalPoints - a.finalPoints);
+
+    const colors = [
+      "#22c55e", // Emerald
+      "#60a5fa", // Blue
+      "#eab308", // Yellow / Gold
+      "#ec4899", // Pink
+      "#a855f7", // Purple
+      "#f97316", // Orange
+      "#14b8a6", // Teal
+      "#f43f5e", // Rose
+      "#3b82f6", // Indigo
+      "#84cc16", // Lime
+    ];
+
+    const lines = sortedParticipantsForColors.map((p, idx) => {
+      return {
+        ...p,
+        color: colors[idx % colors.length]
+      };
+    });
+
+    const labels = ["Início", ...chronologicalPlayedMatches.map((m) => `${m.home.name.substring(0, 3)} x ${m.away.name.substring(0, 3)}`)];
+
+    return {
+      labels,
+      lines,
+      matches: chronologicalPlayedMatches
+    };
+  }, [league, officialResults, chronologicalPlayedMatches, participants]);
+
+  const maxPoints = useMemo(() => {
+    let maxVal = 5;
+    chartData.lines.forEach((line) => {
+      const lineMax = Math.max(...line.history);
+      if (lineMax > maxVal) {
+        maxVal = lineMax;
+      }
+    });
+    return Math.ceil(maxVal * 1.1);
+  }, [chartData]);
+
+  const toggleLineVisibility = (id: string) => {
+    setHiddenLineIds(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const isAllVisible = useMemo(() => {
+    if (chartData.lines.length === 0) return true;
+    return chartData.lines.every((line) => !hiddenLineIds[line.id]);
+  }, [chartData.lines, hiddenLineIds]);
+
+  const isNoneVisible = useMemo(() => {
+    if (chartData.lines.length === 0) return true;
+    return chartData.lines.every((line) => hiddenLineIds[line.id]);
+  }, [chartData.lines, hiddenLineIds]);
+
+  const addAllLines = () => {
+    setHiddenLineIds({});
+  };
+
+  const removeAllLines = () => {
+    const nextHidden: Record<string, boolean> = {};
+    chartData.lines.forEach((line) => {
+      nextHidden[line.id] = true;
+    });
+    setHiddenLineIds(nextHidden);
+  };
 
   // Garantir limites de índices válidos
   useEffect(() => {
@@ -708,7 +829,7 @@ export default function LeagueDetail() {
 
                     {/* Predictions Table */}
                     <div style={{ overflow: "hidden", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(0, 0, 0, 0.1)" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", tableLayout: "fixed" }}>
                         <thead>
                           <tr style={{ background: "rgba(255, 255, 255, 0.02)", borderBottom: "1px solid var(--border)" }}>
                             <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "var(--muted)", fontWeight: 600 }}>Participante</th>
@@ -721,12 +842,12 @@ export default function LeagueDetail() {
                             const displayScore = pred && pred.home !== "" && pred.away !== "" ? `${pred.home} x ${pred.away}` : "-";
                             return (
                               <tr key={p.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.02)" }}>
-                                <td style={{ padding: "0.6rem 0.75rem", textAlign: "left" }}>
-                                  <Link to={`/league/${league.id}/${p.id}`} className="col-link" style={{ fontWeight: 600 }}>
+                                <td style={{ padding: "0.6rem 0.75rem", textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  <Link to={`/league/${league.id}/${p.id}`} className="col-link" style={{ fontWeight: 600, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     {p.nickname}
                                   </Link>
                                 </td>
-                                <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>
+                                <td style={{ padding: "0.6rem 0.75rem", textAlign: "center", width: "100px", minWidth: "100px", whiteSpace: "nowrap" }}>
                                   <span className="matrix-score-cell" style={{ display: "inline-block", background: "rgba(255, 255, 255, 0.05)", borderRadius: "4px", padding: "0.2rem 0.5rem", fontWeight: "bold" }}>
                                     {displayScore}
                                   </span>
@@ -983,7 +1104,7 @@ export default function LeagueDetail() {
 
                       {/* Predictions Table */}
                       <div style={{ overflow: "hidden", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(0, 0, 0, 0.1)" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", tableLayout: "fixed" }}>
                           <thead>
                             <tr style={{ background: "rgba(255, 255, 255, 0.02)", borderBottom: "1px solid var(--border)" }}>
                               <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "var(--muted)", fontWeight: 600 }}>Participante</th>
@@ -1035,17 +1156,17 @@ export default function LeagueDetail() {
 
                               return (
                                 <tr key={p.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.02)" }}>
-                                  <td style={{ padding: "0.6rem 0.75rem", textAlign: "left" }}>
-                                    <Link to={`/league/${league.id}/${p.id}`} className="col-link" style={{ fontWeight: 600 }}>
+                                  <td style={{ padding: "0.6rem 0.75rem", textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    <Link to={`/league/${league.id}/${p.id}`} className="col-link" style={{ fontWeight: 600, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                       {p.nickname}
                                     </Link>
                                   </td>
-                                  <td style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>
+                                  <td style={{ padding: "0.6rem 0.75rem", textAlign: "center", width: "100px", minWidth: "100px", whiteSpace: "nowrap" }}>
                                     <span className="matrix-score-cell" style={{ ...cellStyle, display: "inline-block", borderRadius: "4px", padding: "0.2rem 0.5rem", fontWeight: "bold" }}>
                                       {displayScore}
                                     </span>
                                   </td>
-                                  <td style={{ padding: "0.6rem 0.75rem", textAlign: "right", fontWeight: "bold", color: pts > 0 ? "var(--accent)" : "var(--muted)" }}>
+                                  <td style={{ padding: "0.6rem 0.75rem", textAlign: "right", fontWeight: "bold", color: pts > 0 ? "var(--accent)" : "var(--muted)", width: "90px", minWidth: "90px", whiteSpace: "nowrap" }}>
                                     {pred && pred.home.trim() !== "" ? `+${pts} pts` : "0 pts"}
                                   </td>
                                 </tr>
@@ -1061,6 +1182,295 @@ export default function LeagueDetail() {
             )}
           </div>
         )}
+
+        {/* Gráfico de Evolução de Pontos */}
+        {playedMatches.length > 0 && (() => {
+          const svgWidth = 600;
+          const svgHeight = 320;
+          const paddingLeft = 40;
+          const paddingRight = 30;
+          const paddingTop = 30;
+          const paddingBottom = 45;
+          const netWidth = svgWidth - paddingLeft - paddingRight;
+          const netHeight = svgHeight - paddingTop - paddingBottom;
+
+          const gridLines: { val: number; y: number }[] = [];
+          const step = maxPoints / 4;
+          for (let i = 0; i <= 4; i++) {
+            const val = Math.round(step * i);
+            const y = paddingTop + netHeight - (val * (netHeight / maxPoints));
+            gridLines.push({ val, y });
+          }
+
+          const xCoords: { label: string; x: number }[] = [];
+          const count = chartData.labels.length;
+          if (count > 0) {
+            for (let j = 0; j < count; j++) {
+              const x = paddingLeft + (j * (netWidth / (count - 1)));
+              xCoords.push({ label: chartData.labels[j], x });
+            }
+          }
+
+          return (
+            <div className="dashboard-panel panel-chart" style={{ gridColumn: "1 / -1", width: "100%", overflow: "hidden", marginTop: "1.5rem" }}>
+              <h3 className="dashboard-panel-title" style={{ marginBottom: "0.5rem" }}>
+                Histórico de Evolução de Pontos
+              </h3>
+              <p className="form-helper" style={{ marginBottom: "1.5rem" }}>
+                Acompanhe o ganho acumulado de pontos dos participantes rodada a rodada. Passe o mouse nos pontos para ver detalhes. Clique nos nomes da legenda para ocultar/exibir as linhas.
+              </p>
+
+              <div style={{ position: "relative", width: "100%", height: `${svgHeight}px`, background: "rgba(0, 0, 0, 0.15)", borderRadius: "8px", border: "1px solid var(--border)", padding: "10px" }}>
+                <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" height="100%" style={{ overflow: "visible" }}>
+                  <defs>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="2" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+
+                  {/* Grid horizontal */}
+                  {gridLines.map((line, idx) => (
+                    <g key={idx}>
+                      <line
+                        x1={paddingLeft}
+                        y1={line.y}
+                        x2={svgWidth - paddingRight}
+                        y2={line.y}
+                        stroke="var(--border)"
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                      />
+                      <text
+                        x={paddingLeft - 8}
+                        y={line.y + 4}
+                        fill="var(--muted)"
+                        fontSize="0.75rem"
+                        textAnchor="end"
+                      >
+                        {line.val}
+                      </text>
+                    </g>
+                  ))}
+
+                  {/* Grid vertical */}
+                  {xCoords.map((coord, idx) => (
+                    <g key={idx}>
+                      <line
+                        x1={coord.x}
+                        y1={paddingTop}
+                        x2={coord.x}
+                        y2={paddingTop + netHeight}
+                        stroke="rgba(255, 255, 255, 0.03)"
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={coord.x}
+                        y={paddingTop + netHeight + 16}
+                        fill="var(--muted)"
+                        fontSize="0.65rem"
+                        textAnchor="middle"
+                        transform={`rotate(-20 ${coord.x} ${paddingTop + netHeight + 16})`}
+                      >
+                        {coord.label}
+                      </text>
+                    </g>
+                  ))}
+
+                  {/* Linhas dos Participantes */}
+                  {chartData.lines.map((line) => {
+                    if (hiddenLineIds[line.id]) return null;
+
+                    const points = line.history.map((val, idx) => {
+                      const x = xCoords[idx]?.x || paddingLeft;
+                      const y = paddingTop + netHeight - (val * (netHeight / maxPoints));
+                      return { x, y, val, idx };
+                    });
+
+                    const d = points.reduce((acc, p, idx) => {
+                      return idx === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`;
+                    }, "");
+
+                    return (
+                      <g key={line.id}>
+                        {/* Glow path */}
+                        <path
+                          d={d}
+                          fill="none"
+                          stroke={line.color}
+                          strokeWidth={6}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          opacity={0.15}
+                          style={{ filter: "url(#glow)" }}
+                        />
+                        {/* Active path */}
+                        <path
+                          d={d}
+                          fill="none"
+                          stroke={line.color}
+                          strokeWidth={2.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        {/* Dots */}
+                        {points.map((p, pIdx) => (
+                          <circle
+                            key={pIdx}
+                            cx={p.x}
+                            cy={p.y}
+                            r={hoveredPoint && hoveredPoint.nickname === line.nickname && hoveredPoint.idx === p.idx ? 6 : 3.5}
+                            fill="#0c1118"
+                            stroke={line.color}
+                            strokeWidth={2}
+                            style={{ transition: "all 0.1s ease" }}
+                          />
+                        ))}
+                      </g>
+                    );
+                  })}
+
+                  {/* Overlay interativo de Hover */}
+                  {chartData.lines.map((line) => {
+                    if (hiddenLineIds[line.id]) return null;
+
+                    return line.history.map((val, idx) => {
+                      const x = xCoords[idx]?.x || paddingLeft;
+                      const y = paddingTop + netHeight - (val * (netHeight / maxPoints));
+
+                      return (
+                        <circle
+                          key={`${line.id}-${idx}`}
+                          cx={x}
+                          cy={y}
+                          r={12}
+                          fill="transparent"
+                          style={{ cursor: "pointer" }}
+                          onMouseEnter={() => {
+                            setHoveredPoint({
+                              nickname: line.nickname,
+                              val,
+                              label: chartData.labels[idx],
+                              x: (x / svgWidth) * 100,
+                              y: (y / svgHeight) * 100,
+                              color: line.color,
+                              idx
+                            });
+                          }}
+                          onMouseLeave={() => setHoveredPoint(null)}
+                        />
+                      );
+                    });
+                  })}
+                </svg>
+
+                {/* Tooltip render */}
+                {hoveredPoint && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: `${hoveredPoint.x}%`,
+                      top: `calc(${hoveredPoint.y}% - 35px)`,
+                      transform: "translateX(-50%)",
+                      background: "var(--bg-card)",
+                      border: `1px solid ${hoveredPoint.color}`,
+                      padding: "0.4rem 0.6rem",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      pointerEvents: "none",
+                      zIndex: 20,
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.6)",
+                      whiteSpace: "nowrap",
+                      color: "var(--text)"
+                    }}
+                  >
+                    <div style={{ fontWeight: "bold", color: "#ffffff", marginBottom: "0.15rem" }}>{hoveredPoint.nickname}</div>
+                    <div style={{ color: hoveredPoint.color, fontWeight: "700" }}>{hoveredPoint.val} pts</div>
+                    <div style={{ fontSize: "0.65rem", color: "var(--muted)" }}>{hoveredPoint.label}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Legenda do Gráfico */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", marginTop: "1.25rem" }}>
+                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
+                  <button
+                    type="button"
+                    onClick={addAllLines}
+                    disabled={isAllVisible}
+                    className="btn"
+                    style={{
+                      padding: "0.35rem 0.75rem",
+                      fontSize: "0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border)",
+                      color: isAllVisible ? "var(--muted)" : "var(--text)",
+                      background: isAllVisible ? "rgba(255, 255, 255, 0.01)" : "rgba(255, 255, 255, 0.05)",
+                      fontWeight: 600,
+                      cursor: isAllVisible ? "not-allowed" : "pointer",
+                      opacity: isAllVisible ? 0.4 : 1,
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    👁️ Adicionar Todos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={removeAllLines}
+                    disabled={isNoneVisible}
+                    className="btn"
+                    style={{
+                      padding: "0.35rem 0.75rem",
+                      fontSize: "0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border)",
+                      color: isNoneVisible ? "var(--muted)" : "var(--text)",
+                      background: isNoneVisible ? "rgba(255, 255, 255, 0.01)" : "rgba(255, 255, 255, 0.05)",
+                      fontWeight: 600,
+                      cursor: isNoneVisible ? "not-allowed" : "pointer",
+                      opacity: isNoneVisible ? 0.4 : 1,
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    🚫 Remover Todos
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem 1rem", justifyContent: "center" }}>
+                  {chartData.lines.map((line) => {
+                    const isVisible = !hiddenLineIds[line.id];
+                    return (
+                      <button
+                        key={line.id}
+                        type="button"
+                        onClick={() => toggleLineVisibility(line.id)}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          outline: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.4rem",
+                          cursor: "pointer",
+                          fontSize: "0.8rem",
+                          color: isVisible ? "var(--text)" : "var(--muted)",
+                          opacity: isVisible ? 1 : 0.45,
+                          textDecoration: isVisible ? "none" : "line-through",
+                          padding: "0.2rem 0.4rem",
+                          borderRadius: "4px",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: line.color, display: "inline-block" }}></span>
+                        <span style={{ fontWeight: 600 }}>{line.nickname}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Componente Invisível para Captura do Último Resultado */}
         {playedMatches.length > 0 && league && (
