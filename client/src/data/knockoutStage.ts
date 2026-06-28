@@ -33,6 +33,7 @@ const KNOCKOUT_TEAMS: Record<string, Team> = {
   cpv: { id: "cpv", name: "Cabo Verde" },
   esp: { id: "esp", name: "Espanha" },
   uru: { id: "uru", name: "Uruguai" },
+  aut: { id: "aut", name: "Áustria" },
 };
 
 function mkK(
@@ -54,31 +55,31 @@ function mkK(
 export const KNOCKOUT_MATCHES: MatchDef[] = [
   mkK("16-AVOS-1", "16-avos", "can", "rsa", "28 de jun às 16:00"),
   mkK("16-AVOS-2", "16-avos", "bra", "jpn", "29 de jun às 14:00"),
-  mkK("16-AVOS-3", "16-avos", "ger", "par", "29 de jun às 20:00"),
-  mkK("16-AVOS-4", "16-avos", "ned", "mar", "29 de jun às 23:00"),
-  mkK("16-AVOS-5", "16-avos", "civ", "nor", "30 de jun às 16:00"),
-  mkK("16-AVOS-6", "16-avos", "fra", "swe", "30 de jun às 20:00"),
-  mkK("16-AVOS-7", "16-avos", "mex", "ecu", "30 de jun às 23:00"),
-  mkK("16-AVOS-8", "16-avos", "usa", "bih", "01 de jul às 16:00"),
-  mkK("16-AVOS-9", "16-avos", "sui", "alg", "01 de jul às 20:00"),
-  mkK("16-AVOS-10", "16-avos", "bel", "sen", "01 de jul às 23:00"),
-  mkK("16-AVOS-11", "16-avos", "col", "gha", "02 de jul às 16:00"),
-  mkK("16-AVOS-12", "16-avos", "eng", "cod", "02 de jul às 20:00"),
-  mkK("16-AVOS-13", "16-avos", "por", "cro", "02 de jul às 23:00"),
-  mkK("16-AVOS-14", "16-avos", "aus", "egy", "03 de jul às 16:00"),
-  mkK("16-AVOS-15", "16-avos", "arg", "cpv", "03 de jul às 20:00"),
-  mkK("16-AVOS-16", "16-avos", "esp", "uru", "03 de jul às 23:00"),
+  mkK("16-AVOS-3", "16-avos", "ger", "par", "29 de jun às 17:30"),
+  mkK("16-AVOS-4", "16-avos", "ned", "mar", "29 de jun às 22:00"),
+  mkK("16-AVOS-5", "16-avos", "civ", "nor", "30 de jun às 14:00"),
+  mkK("16-AVOS-6", "16-avos", "fra", "swe", "30 de jun às 18:00"),
+  mkK("16-AVOS-7", "16-avos", "mex", "ecu", "30 de jun às 22:00"),
+  mkK("16-AVOS-8", "16-avos", "usa", "bih", "01 de jul às 21:00"),
+  mkK("16-AVOS-9", "16-avos", "sui", "alg", "03 de jul às 00:00"),
+  mkK("16-AVOS-10", "16-avos", "bel", "sen", "01 de jul às 17:00"),
+  mkK("16-AVOS-11", "16-avos", "col", "gha", "03 de jul às 22:30"),
+  mkK("16-AVOS-12", "16-avos", "eng", "cod", "01 de jul às 13:00"),
+  mkK("16-AVOS-13", "16-avos", "por", "cro", "02 de jul às 20:00"),
+  mkK("16-AVOS-14", "16-avos", "aus", "egy", "03 de jul às 15:00"),
+  mkK("16-AVOS-15", "16-avos", "arg", "cpv", "03 de jul às 19:00"),
+  mkK("16-AVOS-16", "16-avos", "esp", "aut", "03 de jul às 23:00"),
 ];
 
 export const OITAVAS_MATCHES: MatchDef[] = [
-  { id: "OITAVAS-1", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-1" }, away: { id: "TBD", name: "Vencedor 16-AVOS-2" }, scheduled: "04 de jul às 16:00" },
-  { id: "OITAVAS-2", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-3" }, away: { id: "TBD", name: "Vencedor 16-AVOS-4" }, scheduled: "04 de jul às 20:00" },
-  { id: "OITAVAS-3", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-5" }, away: { id: "TBD", name: "Vencedor 16-AVOS-6" }, scheduled: "05 de jul às 16:00" },
+  { id: "OITAVAS-1", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-1" }, away: { id: "TBD", name: "Vencedor 16-AVOS-4" }, scheduled: "04 de jul às 16:00" },
+  { id: "OITAVAS-2", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-3" }, away: { id: "TBD", name: "Vencedor 16-AVOS-6" }, scheduled: "04 de jul às 20:00" },
+  { id: "OITAVAS-3", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-2" }, away: { id: "TBD", name: "Vencedor 16-AVOS-5" }, scheduled: "05 de jul às 16:00" },
   { id: "OITAVAS-4", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-7" }, away: { id: "TBD", name: "Vencedor 16-AVOS-8" }, scheduled: "05 de jul às 20:00" },
-  { id: "OITAVAS-5", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-9" }, away: { id: "TBD", name: "Vencedor 16-AVOS-10" }, scheduled: "06 de jul às 16:00" },
-  { id: "OITAVAS-6", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-11" }, away: { id: "TBD", name: "Vencedor 16-AVOS-12" }, scheduled: "06 de jul às 20:00" },
-  { id: "OITAVAS-7", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-13" }, away: { id: "TBD", name: "Vencedor 16-AVOS-14" }, scheduled: "07 de jul às 16:00" },
-  { id: "OITAVAS-8", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-15" }, away: { id: "TBD", name: "Vencedor 16-AVOS-16" }, scheduled: "07 de jul às 20:00" },
+  { id: "OITAVAS-5", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-10" }, away: { id: "TBD", name: "Vencedor 16-AVOS-12" }, scheduled: "06 de jul às 16:00" },
+  { id: "OITAVAS-6", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-9" }, away: { id: "TBD", name: "Vencedor 16-AVOS-11" }, scheduled: "06 de jul às 20:00" },
+  { id: "OITAVAS-7", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-13" }, away: { id: "TBD", name: "Vencedor 16-AVOS-16" }, scheduled: "07 de jul às 16:00" },
+  { id: "OITAVAS-8", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-15" }, away: { id: "TBD", name: "Vencedor 16-AVOS-14" }, scheduled: "07 de jul às 20:00" },
 ];
 
 export const QUARTAS_MATCHES: MatchDef[] = [

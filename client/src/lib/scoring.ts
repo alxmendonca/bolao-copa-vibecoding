@@ -1,19 +1,19 @@
 import type { ScoreInput } from "./standings";
 import type { LeagueRules, Participant } from "./firebaseService";
 
-// Helper para analisar a data e hora do jogo (ex: "11 de jun às 16:00")
 export function parseMatchDate(scheduledStr: string): number {
   const cleaned = (scheduledStr || "").trim().toLowerCase();
   const match = cleaned.match(/(\d+)\s+de\s+(\w+)(?:\s+às\s+(\d+):(\d+))?/);
-  if (!match) return new Date(2026, 5, 30).getTime();
+  if (!match) return new Date("2026-06-30T00:00:00-03:00").getTime();
 
   const day = parseInt(match[1], 10);
   const monthStr = match[2];
   const hour = match[3] ? parseInt(match[3], 10) : 0;
   const minute = match[4] ? parseInt(match[4], 10) : 0;
 
-  const month = monthStr.startsWith("jun") ? 5 : 6;
-  return new Date(2026, month, day, hour, minute).getTime();
+  const month = monthStr.startsWith("jun") ? 6 : 7;
+  const isoStr = `2026-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00-03:00`;
+  return new Date(isoStr).getTime();
 }
 
 function parseScore(val: string): number | null {
