@@ -64,6 +64,12 @@ export default function ParticipantDetail() {
     loadData();
   }, [leagueId, participantId]);
 
+  useEffect(() => {
+    if (league?.name && participant?.name) {
+      document.title = `${participant.name} em ${league.name} — Bolão Copa 2026`;
+    }
+  }, [league, participant]);
+
   // Calcula pontuação total do participante
   const totalPoints = useMemo(() => {
     if (!participant || !officialResults || !league) return 0;

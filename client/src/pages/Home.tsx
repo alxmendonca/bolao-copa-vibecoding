@@ -56,6 +56,16 @@ export default function Home() {
     saveBolaoState({ participantName, scores });
   }, [hydrated, participantName, scores]);
 
+  useEffect(() => {
+    const now = new Date().getTime();
+    const cutoffDate = new Date("2026-06-28T00:00:00-03:00").getTime();
+    if (now >= cutoffDate) {
+      document.title = "Bolão Copa 2026 — 16-avos de Final";
+    } else {
+      document.title = "Bolão Copa 2026 — Fase de Grupos";
+    }
+  }, []);
+
   const onScoreChange = useCallback(
     (matchId: string, field: "home" | "away", value: string) => {
       const next = sanitizeScoreInput(value);

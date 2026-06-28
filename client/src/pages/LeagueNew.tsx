@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { createLeague, isFirebaseConfigured } from "../lib/firebaseService";
 
@@ -12,6 +12,10 @@ export default function LeagueNew() {
   const [phase, setPhase] = useState("16-avos");
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.title = "Criar Nova Liga — Bolão Copa 2026";
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

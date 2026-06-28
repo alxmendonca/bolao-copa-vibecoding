@@ -66,6 +66,12 @@ export default function LeagueFill() {
     loadLeague();
   }, [leagueId]);
 
+  useEffect(() => {
+    if (league?.name) {
+      document.title = `Palpites: ${league.name} — Bolão Copa 2026`;
+    }
+  }, [league]);
+
   const onScoreChange = useCallback(
     (matchId: string, field: "home" | "away", value: string) => {
       const next = sanitizeScoreInput(value);

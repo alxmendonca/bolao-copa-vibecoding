@@ -60,6 +60,10 @@ export default function AdminPanel() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  useEffect(() => {
+    document.title = "Painel do Administrador — Bolão Copa 2026";
+  }, []);
+
   // Verifica se já existe chave na sessão ao carregar
   useEffect(() => {
     const storedKey = sessionStorage.getItem(SESSION_KEY);

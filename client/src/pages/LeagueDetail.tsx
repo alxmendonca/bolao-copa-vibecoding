@@ -99,6 +99,12 @@ export default function LeagueDetail() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (league?.name) {
+      document.title = `${league.name} — Bolão Copa 2026`;
+    }
+  }, [league]);
+
   // Atualiza o relógio interno a cada 15 segundos
   useEffect(() => {
     const timer = setInterval(() => {
