@@ -623,9 +623,11 @@ export default function LeagueDetail() {
               src={league.logo}
               alt="Logo da Liga"
               style={{
-                width: "90px",
-                height: "90px",
-                objectFit: "cover",
+                maxHeight: "140px",
+                maxWidth: "220px",
+                width: "auto",
+                height: "auto",
+                objectFit: "contain",
                 borderRadius: "8px",
                 border: "2px solid var(--border)",
               }}

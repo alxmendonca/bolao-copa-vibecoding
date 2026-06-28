@@ -207,14 +207,22 @@ export default function LeagueNew() {
                 style={{ padding: "0.5rem" }}
               />
               <p className="form-helper" style={{ marginTop: "0.25rem", fontSize: "0.8rem", color: "var(--muted)" }}>
-                Escolha uma imagem quadrada para personalizar o cabeçalho da sua liga.
+                Escolha uma imagem para personalizar o cabeçalho da sua liga.
               </p>
               {logoPreview && (
                 <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "1rem" }}>
                   <img
                     src={logoPreview}
                     alt="Pré-visualização"
-                    style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "8px", border: "1px solid var(--border)" }}
+                    style={{
+                      maxHeight: "100px",
+                      maxWidth: "150px",
+                      width: "auto",
+                      height: "auto",
+                      objectFit: "contain",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)",
+                    }}
                   />
                   <button
                     type="button"
