@@ -20,6 +20,12 @@ export default function App() {
           <Route path="/league/:leagueId/:participantId" element={<ParticipantDetail />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>
+        <footer className="site-footer" style={{ textAlign: "center", padding: "2rem 1rem", fontSize: "0.8rem", color: "var(--muted)", borderTop: "1px solid var(--border)", marginTop: "3rem" }}>
+          <p style={{ maxWidth: "600px", margin: "0 auto", lineHeight: "1.5" }}>
+            Disclaimer: O site não é comercial, é apenas para uma brincadeira de amigos, sem fins lucrativos.
+            As pessoas representadas no site não existem realmente. Pessoas não autorizadas não devem criar bolão.
+          </p>
+        </footer>
       </div>
     </BrowserRouter>
   );
