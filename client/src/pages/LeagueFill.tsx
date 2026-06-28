@@ -1,24 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ALL_MATCHES, GROUPS } from "../data/groupStage";
+import { GROUPS } from "../data/groupStage";
 import { GroupSection } from "../components/GroupSection";
+import { MatchRow } from "../components/MatchRow";
 import {
   getLeague,
   joinLeague,
   isSubmissionDeadlinePassed,
+  getExpiryDate,
+  getLeagueMatches,
   isFirebaseConfigured,
   type League,
 } from "../lib/firebaseService";
 import { hashPassword } from "../lib/hash";
 import type { ScoreInput } from "../lib/standings";
 
-function emptyScores(): Record<string, ScoreInput> {
-  const o: Record<string, ScoreInput> = {};
-  for (const m of ALL_MATCHES) {
-    o[m.id] = { home: "", away: "" };
-  }
-  return o;
-}
+
 
 function sanitizeScoreInput(value: string): string {
   return value.replace(/\D/g, "");
@@ -36,7 +33,7 @@ export default function LeagueFill() {
   const [fullName, setFullName] = useState("");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
-  const [scores, setScores] = useState<Record<string, ScoreInput>>(emptyScores);
+  const [scores, setScores] = useState<Record<string, ScoreInput>>({});
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -47,12 +44,18 @@ export default function LeagueFill() {
 
     const loadLeague = async () => {
       try {
-        const [l, isPassed] = await Promise.all([
-          getLeague(leagueId),
-          isSubmissionDeadlinePassed(),
-        ]);
+        const l = await getLeague(leagueId);
+        const isPassed = await isSubmissionDeadlinePassed(l.isKnockout);
         setLeague(l);
         setDeadlinePassed(isPassed);
+
+        // Inicializa placares vazios baseados na fase da liga
+        const matches = getLeagueMatches(l.phase);
+        const initialScores: Record<string, ScoreInput> = {};
+        for (const m of matches) {
+          initialScores[m.id] = { home: "", away: "" };
+        }
+        setScores(initialScores);
       } catch (err: any) {
         setError(err.message || "Erro ao carregar dados da liga.");
       } finally {
@@ -77,21 +80,34 @@ export default function LeagueFill() {
     [],
   );
 
+  const leagueMatches = useMemo(() => {
+    return getLeagueMatches(league?.phase);
+  }, [league]);
+
   const filledCount = useMemo(() => {
     let n = 0;
-    for (const m of ALL_MATCHES) {
+    for (const m of leagueMatches) {
       const s = scores[m.id];
       if (s?.home.trim() !== "" && s?.away.trim() !== "") n += 1;
     }
     return n;
-  }, [scores]);
+  }, [scores, leagueMatches]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (deadlinePassed) {
-      setError("O prazo de inscrições para esta liga expirou (11 de Junho às 14:00 BRT).");
+      const deadline = await getExpiryDate(league?.isKnockout);
+      const formatted = deadline.toLocaleString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      setError(`O prazo de inscrições para esta liga expirou (${formatted} BRT).`);
       return;
     }
 
@@ -101,10 +117,10 @@ export default function LeagueFill() {
       return;
     }
 
-    if (filledCount < ALL_MATCHES.length) {
+    if (filledCount < leagueMatches.length) {
       if (
         !window.confirm(
-          `Você preencheu ${filledCount} de ${ALL_MATCHES.length} palpites. Deseja salvar mesmo assim? Poderá editar os palpites restantes depois (antes do prazo).`,
+          `Você preencheu ${filledCount} de ${leagueMatches.length} palpites. Deseja salvar mesmo assim? Poderá editar os palpites restantes depois (antes do prazo).`,
         )
       ) {
         return;
@@ -169,7 +185,7 @@ export default function LeagueFill() {
               Voltar para a Liga
             </Link>
             <span className="hero-meta">
-              {filledCount}/{ALL_MATCHES.length} jogos preenchidos
+              {filledCount}/{leagueMatches.length} jogos preenchidos
             </span>
           </div>
         </div>
@@ -180,18 +196,18 @@ export default function LeagueFill() {
         className="sticky-progress"
         role="status"
         aria-live="polite"
-        aria-label={`${filledCount} de ${ALL_MATCHES.length} jogos preenchidos`}
+        aria-label={`${filledCount} de ${leagueMatches.length} jogos preenchidos`}
       >
         <div className="sticky-progress-inner">
           <span className="sticky-progress-count">
-            {filledCount}/{ALL_MATCHES.length}
+            {filledCount}/{leagueMatches.length}
           </span>
           <span className="sticky-progress-label">jogos preenchidos</span>
           <div
             className="sticky-progress-bar"
             aria-hidden
             style={{
-              ["--progress" as string]: `${(filledCount / ALL_MATCHES.length) * 100}%`,
+              ["--progress" as string]: `${(filledCount / leagueMatches.length) * 100}%`,
             }}
           />
         </div>
@@ -208,7 +224,10 @@ export default function LeagueFill() {
         {deadlinePassed ? (
           <div className="alert-box alert-box--error" style={{ marginBottom: "2rem" }}>
             <strong>🔒 Inscrições Encerradas:</strong>
-            <p>O prazo para envio de novos palpites foi encerrado em 11 de Junho de 2026 às 14:00 BRT.</p>
+            <p>
+              O prazo para envio de novos palpites foi encerrado em{" "}
+              {league?.isKnockout ? "28 de Junho às 16:00 BRT" : "11 de Junho às 14:00 BRT"}.
+            </p>
             <Link to={`/league/${leagueId}`} className="btn btn-primary" style={{ marginTop: "1rem", alignSelf: "flex-start", textDecoration: "none" }}>
               Ver Classificação da Liga
             </Link>
@@ -269,16 +288,33 @@ export default function LeagueFill() {
             </div>
 
             {/* Grid de Palpites */}
-            <div className="groups-stack">
-              {GROUPS.map((g) => (
-                <GroupSection
-                  key={g.letter}
-                  group={g}
-                  scores={scores}
-                  onScoreChange={onScoreChange}
-                />
-              ))}
-            </div>
+            {league?.isKnockout ? (
+              <div className="form-card" style={{ maxWidth: "100%", margin: "0 0 2.5rem 0", padding: "1.5rem" }}>
+                <h3 style={{ margin: "0 0 1.5rem 0" }}>Jogos de Mata-Mata</h3>
+                <ul className="match-list">
+                  {leagueMatches.map((m) => (
+                    <li key={m.id}>
+                      <MatchRow
+                        match={m}
+                        score={scores[m.id] ?? { home: "", away: "" }}
+                        onChange={onScoreChange}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="groups-stack">
+                {GROUPS.map((g) => (
+                  <GroupSection
+                    key={g.letter}
+                    group={g}
+                    scores={scores}
+                    onScoreChange={onScoreChange}
+                  />
+                ))}
+              </div>
+            )}
 
             <div
               style={{
@@ -292,7 +328,7 @@ export default function LeagueFill() {
             >
               <h3 style={{ margin: "0 0 0.5rem" }}>Tudo Pronto?</h3>
               <p style={{ color: "var(--muted)", margin: "0 0 1.5rem" }}>
-                Você preencheu <strong>{filledCount} de {ALL_MATCHES.length}</strong> palpites.
+                Você preencheu <strong>{filledCount} de {leagueMatches.length}</strong> palpites.
               </p>
               <button
                 type="submit"
@@ -309,7 +345,7 @@ export default function LeagueFill() {
 
       <aside className="mobile-dock" aria-label="Atalhos">
         <div className="mobile-dock-progress">
-          <strong>{filledCount}/{ALL_MATCHES.length}</strong>
+          <strong>{filledCount}/{leagueMatches.length}</strong>
           <span>jogos</span>
         </div>
         <button

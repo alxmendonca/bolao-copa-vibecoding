@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ALL_MATCHES, GROUPS } from "../data/groupStage";
+import {
+  KNOCKOUT_MATCHES,
+  OITAVAS_MATCHES,
+  QUARTAS_MATCHES,
+  SEMI_MATCHES,
+  FINAL_MATCHES,
+} from "../data/knockoutStage";
 import { GroupSection } from "../components/GroupSection";
+import { MatchRow } from "../components/MatchRow";
 import {
   getOfficialResults,
   updateOfficialResults,
@@ -10,9 +18,18 @@ import type { ScoreInput } from "../lib/standings";
 
 const SESSION_KEY = "bolao_admin_session_key";
 
+const TOTAL_MATCHES = [
+  ...ALL_MATCHES,
+  ...KNOCKOUT_MATCHES,
+  ...OITAVAS_MATCHES,
+  ...QUARTAS_MATCHES,
+  ...SEMI_MATCHES,
+  ...FINAL_MATCHES,
+];
+
 function emptyScores(): Record<string, ScoreInput> {
   const o: Record<string, ScoreInput> = {};
-  for (const m of ALL_MATCHES) {
+  for (const m of TOTAL_MATCHES) {
     o[m.id] = { home: "", away: "" };
   }
   return o;
@@ -23,7 +40,7 @@ function mergeStoredScores(
 ): Record<string, ScoreInput> {
   const base = emptyScores();
   if (!stored) return base;
-  for (const m of ALL_MATCHES) {
+  for (const m of TOTAL_MATCHES) {
     const s = stored[m.id];
     if (s && typeof s.home === "string" && typeof s.away === "string") {
       base[m.id] = { home: s.home, away: s.away };
@@ -120,7 +137,7 @@ export default function AdminPanel() {
 
   const filledCount = useMemo(() => {
     let n = 0;
-    for (const m of ALL_MATCHES) {
+    for (const m of TOTAL_MATCHES) {
       const s = scores[m.id];
       if (s?.home.trim() !== "" && s?.away.trim() !== "") n += 1;
     }
@@ -187,7 +204,7 @@ export default function AdminPanel() {
               Sair do Painel
             </button>
             <span className="hero-meta">
-              {filledCount}/{ALL_MATCHES.length} jogos com resultado oficial
+              {filledCount}/{TOTAL_MATCHES.length} jogos com resultado oficial
             </span>
           </div>
         </div>
@@ -198,19 +215,19 @@ export default function AdminPanel() {
         className="sticky-progress"
         role="status"
         aria-live="polite"
-        aria-label={`${filledCount} de ${ALL_MATCHES.length} jogos preenchidos`}
+        aria-label={`${filledCount} de ${TOTAL_MATCHES.length} jogos preenchidos`}
         style={{ display: "block" }}
       >
         <div className="sticky-progress-inner">
           <span className="sticky-progress-count">
-            {filledCount}/{ALL_MATCHES.length}
+            {filledCount}/{TOTAL_MATCHES.length}
           </span>
           <span className="sticky-progress-label">resultados oficiais lançados</span>
           <div
             className="sticky-progress-bar"
             aria-hidden
             style={{
-              ["--progress" as string]: `${(filledCount / ALL_MATCHES.length) * 100}%`,
+              ["--progress" as string]: `${(filledCount / TOTAL_MATCHES.length) * 100}%`,
             }}
           />
         </div>
@@ -244,6 +261,81 @@ export default function AdminPanel() {
           </div>
         ) : (
           <div className="groups-stack">
+            {/* Seção Mata-Mata */}
+            <div className="form-card" style={{ maxWidth: "100%", margin: "0 0 2.5rem 0", padding: "1.5rem" }}>
+              <h2 style={{ margin: "0 0 1.5rem 0" }}>Mata-Mata (16-avos de final)</h2>
+              <ul className="match-list">
+                {KNOCKOUT_MATCHES.map((m) => (
+                  <li key={m.id}>
+                    <MatchRow
+                      match={m}
+                      score={scores[m.id] ?? { home: "", away: "" }}
+                      onChange={onScoreChange}
+                      isAdmin={true}
+                    />
+                  </li>
+                ))}
+              </ul>
+
+              <h2 style={{ margin: "2.5rem 0 1.5rem 0" }}>Mata-Mata (Oitavas de final)</h2>
+              <ul className="match-list">
+                {OITAVAS_MATCHES.map((m) => (
+                  <li key={m.id}>
+                    <MatchRow
+                      match={m}
+                      score={scores[m.id] ?? { home: "", away: "" }}
+                      onChange={onScoreChange}
+                      isAdmin={true}
+                    />
+                  </li>
+                ))}
+              </ul>
+
+              <h2 style={{ margin: "2.5rem 0 1.5rem 0" }}>Mata-Mata (Quartas de final)</h2>
+              <ul className="match-list">
+                {QUARTAS_MATCHES.map((m) => (
+                  <li key={m.id}>
+                    <MatchRow
+                      match={m}
+                      score={scores[m.id] ?? { home: "", away: "" }}
+                      onChange={onScoreChange}
+                      isAdmin={true}
+                    />
+                  </li>
+                ))}
+              </ul>
+
+              <h2 style={{ margin: "2.5rem 0 1.5rem 0" }}>Mata-Mata (Semifinais)</h2>
+              <ul className="match-list">
+                {SEMI_MATCHES.map((m) => (
+                  <li key={m.id}>
+                    <MatchRow
+                      match={m}
+                      score={scores[m.id] ?? { home: "", away: "" }}
+                      onChange={onScoreChange}
+                      isAdmin={true}
+                    />
+                  </li>
+                ))}
+              </ul>
+
+              <h2 style={{ margin: "2.5rem 0 1.5rem 0" }}>Mata-Mata (Final e 3º Lugar)</h2>
+              <ul className="match-list">
+                {FINAL_MATCHES.map((m) => (
+                  <li key={m.id}>
+                    <MatchRow
+                      match={m}
+                      score={scores[m.id] ?? { home: "", away: "" }}
+                      onChange={onScoreChange}
+                      isAdmin={true}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Seção Fase de Grupos */}
+            <h2 style={{ margin: "2rem 0 1rem 0" }}>Fase de Grupos (Fase Encerrada - Travado)</h2>
             {GROUPS.map((g) => (
               <GroupSection
                 key={g.letter}
@@ -251,6 +343,7 @@ export default function AdminPanel() {
                 scores={scores}
                 onScoreChange={onScoreChange}
                 isAdmin={true}
+                disabled={true}
               />
             ))}
           </div>
@@ -268,7 +361,7 @@ export default function AdminPanel() {
         >
           <h3 style={{ margin: "0 0 0.5rem" }}>Confirmar Resultados?</h3>
           <p style={{ color: "var(--muted)", margin: "0 0 1.5rem" }}>
-            Você preencheu <strong>{filledCount} de {ALL_MATCHES.length}</strong> resultados.
+            Você preencheu <strong>{filledCount} de {TOTAL_MATCHES.length}</strong> resultados.
           </p>
           <button
             type="button"
@@ -284,7 +377,7 @@ export default function AdminPanel() {
 
       <aside className="mobile-dock" aria-label="Atalhos">
         <div className="mobile-dock-progress">
-          <strong>{filledCount}/{ALL_MATCHES.length}</strong>
+          <strong>{filledCount}/{TOTAL_MATCHES.length}</strong>
           <span>oficiais</span>
         </div>
         <button

@@ -9,6 +9,7 @@ export default function LeagueNew() {
   const [exact, setExact] = useState(25);
   const [result, setResult] = useState(10);
   const [creatorCode, setCreatorCode] = useState("");
+  const [phase, setPhase] = useState("16-avos");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +47,7 @@ export default function LeagueNew() {
         creatorEmail,
         rules,
         creatorCode,
+        phase,
       );
 
       const path = `/league/${leagueId}`;
@@ -146,6 +148,29 @@ export default function LeagueNew() {
                 onChange={(e) => setName(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="league-phase">
+                Fase do Bolão *
+              </label>
+              <select
+                id="league-phase"
+                className="form-input"
+                value={phase}
+                onChange={(e) => setPhase(e.target.value)}
+                required
+              >
+                <option value="grupos" disabled>Fase de Grupos (Já passou)</option>
+                <option value="16-avos">16-avos de Final (Disponível)</option>
+                <option value="oitavas" disabled>Oitavas de Final (Ainda sem times definidos)</option>
+                <option value="quartas" disabled>Quartas de Final (Ainda sem times definidos)</option>
+                <option value="semi" disabled>Semifinais (Ainda sem times definidos)</option>
+                <option value="final" disabled>Final (Ainda sem times definidos)</option>
+              </select>
+              <p className="form-helper" style={{ marginTop: "0.25rem", fontSize: "0.8rem", color: "var(--muted)" }}>
+                Cada liga serve apenas para uma única fase. No momento, apenas os 16-avos estão disponíveis.
+              </p>
             </div>
 
             <div className="form-group">

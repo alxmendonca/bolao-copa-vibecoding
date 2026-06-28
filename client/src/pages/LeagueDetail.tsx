@@ -5,13 +5,13 @@ import {
   getParticipants,
   getOfficialResults,
   isSubmissionDeadlinePassed,
+  getLeagueMatches,
   isFirebaseConfigured,
   type League,
   type Participant,
   type OfficialResults,
 } from "../lib/firebaseService";
 import { rankParticipants, calculateMatchPoints, parseMatchDate } from "../lib/scoring";
-import { ALL_MATCHES } from "../data/groupStage";
 import { downloadLeagueExcel } from "../lib/exportExcel";
 import html2canvas from "html2canvas";
 
@@ -136,6 +136,11 @@ export default function LeagueDetail() {
     }
   };
 
+  // Obter a lista de partidas correspondente à fase da liga
+  const leagueMatches = useMemo(() => {
+    return getLeagueMatches(league?.phase);
+  }, [league]);
+
   // Calcula classificação geral dos participantes
   const rankedParticipants = useMemo(() => {
     if (!league || !officialResults) return [];
@@ -145,7 +150,7 @@ export default function LeagueDetail() {
   // Próximos 3 jogos (mostra os próximos 3 jogos futuros e mantém os jogos em andamento)
   const next3Matches = useMemo(() => {
     // 1. Jogos em andamento (iniciados nos últimos 2h20m e sem resultado oficial)
-    const live = ALL_MATCHES.filter((match) => {
+    const live = leagueMatches.filter((match) => {
       const res = officialResults?.scores[match.id];
       const hasOfficial = res && res.home.trim() !== "" && res.away.trim() !== "";
       if (hasOfficial) return false;
@@ -154,7 +159,7 @@ export default function LeagueDetail() {
     });
 
     // 2. Jogos futuros (sem resultado oficial e após o horário atual)
-    const future = ALL_MATCHES.filter((match) => {
+    const future = leagueMatches.filter((match) => {
       const res = officialResults?.scores[match.id];
       const hasOfficial = res && res.home.trim() !== "" && res.away.trim() !== "";
       if (hasOfficial) return false;
@@ -174,11 +179,11 @@ export default function LeagueDetail() {
     });
 
     return [...sortedLive, ...next3Future];
-  }, [currentTime, officialResults]);
+  }, [currentTime, officialResults, leagueMatches]);
 
   // Filtro de jogos de hoje (não iniciados ou que não estão acontecendo/passaram de 2h20)
   const todayMatchesList = useMemo(() => {
-    return ALL_MATCHES.filter((match) => {
+    return leagueMatches.filter((match) => {
       const isToday = isMatchToday(match.scheduled || "", currentTime);
       if (!isToday) return false;
 
@@ -198,11 +203,11 @@ export default function LeagueDetail() {
     }).sort((a, b) => {
       return parseMatchDate(a.scheduled || "") - parseMatchDate(b.scheduled || "");
     });
-  }, [currentTime, officialResults]);
+  }, [currentTime, officialResults, leagueMatches]);
 
   // Filtro de jogos de amanhã (caso os de hoje tenham acabado ou não existam)
   const tomorrowMatchesList = useMemo(() => {
-    return ALL_MATCHES.filter((match) => {
+    return leagueMatches.filter((match) => {
       const isTomorrow = isMatchTomorrow(match.scheduled || "", currentTime);
       if (!isTomorrow) return false;
 
@@ -214,7 +219,7 @@ export default function LeagueDetail() {
     }).sort((a, b) => {
       return parseMatchDate(a.scheduled || "") - parseMatchDate(b.scheduled || "");
     });
-  }, [currentTime, officialResults]);
+  }, [currentTime, officialResults, leagueMatches]);
 
   // Jogos selecionados com base no toggle (Próximos 3 ou Jogos de Hoje / Amanhã)
   const selectedMatches = useMemo(() => {
@@ -235,7 +240,7 @@ export default function LeagueDetail() {
   const playedMatches = useMemo(() => {
     if (!officialResults) return [];
 
-    const played = ALL_MATCHES.filter((match) => {
+    const played = leagueMatches.filter((match) => {
       const res = officialResults.scores[match.id];
       return res && res.home.trim() !== "" && res.away.trim() !== "";
     });
@@ -244,7 +249,7 @@ export default function LeagueDetail() {
     return [...played].sort((a, b) => {
       return parseMatchDate(b.scheduled || "") - parseMatchDate(a.scheduled || "");
     });
-  }, [officialResults]);
+  }, [officialResults, leagueMatches]);
 
   // Classificação dos participantes antes da última partida finalizada
   const previousRankedParticipants = useMemo(() => {
@@ -906,10 +911,11 @@ export default function LeagueDetail() {
                 </thead>
                 <tbody>
                   {rankedParticipants.map((p, index) => {
-                    // Conta quantos palpites foram totalmente preenchidos
-                    const predictionsCount = Object.values(p.scores).filter(
-                      (s) => s.home.trim() !== "" && s.away.trim() !== "",
-                    ).length;
+                    // Conta quantos palpites foram totalmente preenchidos na liga
+                    const predictionsCount = leagueMatches.filter((m) => {
+                      const s = p.scores[m.id];
+                      return s && s.home.trim() !== "" && s.away.trim() !== "";
+                    }).length;
 
                     // Cálculo do delta de posições
                     const currentRank = index + 1;
@@ -966,7 +972,7 @@ export default function LeagueDetail() {
                           {p.resultHits}
                         </td>
                         <td style={{ color: "var(--muted)" }}>
-                          {predictionsCount} / {ALL_MATCHES.length}
+                          {predictionsCount} / {leagueMatches.length}
                         </td>
                       </tr>
                     );

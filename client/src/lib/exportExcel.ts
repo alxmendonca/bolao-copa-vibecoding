@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx-js-style";
 import type { MatchDef } from "../data/groupStage";
 import { ALL_MATCHES } from "../data/groupStage";
+import { KNOCKOUT_MATCHES } from "../data/knockoutStage";
 import type { ScoreInput } from "./standings";
 import type { League, Participant } from "./firebaseService";
 
@@ -100,7 +101,7 @@ export function buildWorkbookBuffer(
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws["!protect"] = { password: "bolao2026" };
   const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, ws, "Bolão Copa 2026");
+  XLSX.utils.book_append_sheet(book, ws, "BOLIN BET");
 
   return XLSX.write(book, { type: "array", bookType: "xlsx" });
 }
@@ -186,8 +187,8 @@ export function downloadLeagueExcel(
   league: League,
   participants: Participant[],
 ): void {
-  // Ordenar partidas por grupo (ALL_MATCHES já vem ordenada de A a L)
-  const matches = ALL_MATCHES;
+  // Ordenar partidas por grupo (matches já vem ordenada de A a L / mata-mata)
+  const matches = league.isKnockout ? KNOCKOUT_MATCHES : ALL_MATCHES;
 
   // 1. Calcular spans dos grupos para fazer a mesclagem correta no cabeçalho
   const groupSpans: { group: string; span: number }[] = [];

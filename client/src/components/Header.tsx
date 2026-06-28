@@ -11,7 +11,7 @@ export default function Header() {
     <header className="site-header">
       <div className="site-header-inner">
         <Link to="/" className="site-logo">
-          ⚽ <span>Bolão Copa 2026</span>
+          ⚽ <span>BOLIN BET</span>
         </Link>
         <nav className="site-nav">
           <Link to="/" className={`nav-link ${isActive("/")}`}>

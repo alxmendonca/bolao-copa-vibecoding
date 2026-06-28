@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ALL_MATCHES, GROUPS } from "../data/groupStage";
+import { GROUPS } from "../data/groupStage";
 import { GroupSection } from "../components/GroupSection";
+import { MatchRow } from "../components/MatchRow";
 import {
   getLeague,
   getParticipant,
   getOfficialResults,
   updateParticipantScores,
   isSubmissionDeadlinePassed,
+  getLeagueMatches,
   isFirebaseConfigured,
   type League,
   type Participant,
@@ -40,11 +42,11 @@ export default function ParticipantDetail() {
   const loadData = async () => {
     if (!leagueId || !participantId) return;
     try {
-      const [leagueData, pData, results, isPassed] = await Promise.all([
-        getLeague(leagueId),
+      const leagueData = await getLeague(leagueId);
+      const [pData, results, isPassed] = await Promise.all([
         getParticipant(leagueId, participantId),
         getOfficialResults(),
-        isSubmissionDeadlinePassed(),
+        isSubmissionDeadlinePassed(leagueData.isKnockout),
       ]);
       setLeague(leagueData);
       setParticipant(pData);
@@ -130,14 +132,18 @@ export default function ParticipantDetail() {
     }
   };
 
+  const leagueMatches = useMemo(() => {
+    return getLeagueMatches(league?.phase);
+  }, [league]);
+
   const filledCount = useMemo(() => {
     let n = 0;
-    for (const m of ALL_MATCHES) {
+    for (const m of leagueMatches) {
       const s = scores[m.id];
       if (s?.home.trim() !== "" && s?.away.trim() !== "") n += 1;
     }
     return n;
-  }, [scores]);
+  }, [scores, leagueMatches]);
 
   if (loading) {
     return (
@@ -204,19 +210,19 @@ export default function ParticipantDetail() {
           className="sticky-progress"
           role="status"
           aria-live="polite"
-          aria-label={`${filledCount} de ${ALL_MATCHES.length} jogos preenchidos`}
+          aria-label={`${filledCount} de ${leagueMatches.length} jogos preenchidos`}
           style={{ display: "block" }}
         >
           <div className="sticky-progress-inner">
             <span className="sticky-progress-count">
-              {filledCount}/{ALL_MATCHES.length}
+              {filledCount}/{leagueMatches.length}
             </span>
             <span className="sticky-progress-label">palpites preenchidos (Modo Edição)</span>
             <div
               className="sticky-progress-bar"
               aria-hidden
               style={{
-                ["--progress" as string]: `${(filledCount / ALL_MATCHES.length) * 100}%`,
+                ["--progress" as string]: `${(filledCount / leagueMatches.length) * 100}%`,
               }}
             />
           </div>
@@ -291,55 +297,75 @@ export default function ParticipantDetail() {
         )}
 
         {/* Grid de Palpites do Participante */}
-        <div className="groups-stack">
-          {GROUPS.map((g) => {
-            // Se o admin lançou resultados oficiais, podemos exibir o feedback de pontos de cada jogo!
-            // Para isso, vamos passar a classificação do grupo normalmente, mas mostrar no layout
-            return (
-              <div key={g.letter} style={{ position: "relative" }}>
-                <GroupSection
-                  group={g}
-                  scores={scores}
-                  onScoreChange={onScoreChange}
-                  disabled={!isEditing}
-                  officialScores={officialResults?.scores}
-                  rules={league?.rules}
-                />
-                
-                {/* Overlay de pontos obtidos em cada jogo se houver resultado oficial */}
-                {officialResults && Object.keys(officialResults.scores).length > 0 && (
-                  <div
-                    style={{
-                      padding: "0.5rem 1rem",
-                      background: "rgba(20, 28, 40, 0.95)",
-                      borderTop: "1px solid var(--border)",
-                      borderBottomLeftRadius: "var(--radius)",
-                      borderBottomRightRadius: "var(--radius)",
-                      fontSize: "0.8rem",
-                      color: "var(--muted)",
-                      marginTop: "-1px",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      zIndex: 2,
-                    }}
-                  >
-                    <span>Palpites salvos para o Grupo {g.letter}</span>
-                    <span style={{ color: "var(--accent)", fontWeight: "bold" }}>
-                      Pontos Calculados
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {league?.isKnockout ? (
+          <div className="form-card" style={{ maxWidth: "100%", margin: "0 0 2.5rem 0", padding: "1.5rem" }}>
+            <h3 style={{ margin: "0 0 1.5rem 0" }}>Jogos de Mata-Mata</h3>
+            <ul className="match-list">
+              {leagueMatches.map((m) => (
+                <li key={m.id}>
+                  <MatchRow
+                    match={m}
+                    score={scores[m.id] ?? { home: "", away: "" }}
+                    onChange={onScoreChange}
+                    disabled={!isEditing}
+                    officialScore={officialResults?.scores?.[m.id]}
+                    rules={league?.rules}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="groups-stack">
+            {GROUPS.map((g) => {
+              // Se o admin lançou resultados oficiais, podemos exibir o feedback de pontos de cada jogo!
+              // Para isso, vamos passar a classificação do grupo normalmente, mas mostrar no layout
+              return (
+                <div key={g.letter} style={{ position: "relative" }}>
+                  <GroupSection
+                    group={g}
+                    scores={scores}
+                    onScoreChange={onScoreChange}
+                    disabled={!isEditing}
+                    officialScores={officialResults?.scores}
+                    rules={league?.rules}
+                  />
+                  
+                  {/* Overlay de pontos obtidos em cada jogo se houver resultado oficial */}
+                  {officialResults && Object.keys(officialResults.scores).length > 0 && (
+                    <div
+                      style={{
+                        padding: "0.5rem 1rem",
+                        background: "rgba(20, 28, 40, 0.95)",
+                        borderTop: "1px solid var(--border)",
+                        borderBottomLeftRadius: "var(--radius)",
+                        borderBottomRightRadius: "var(--radius)",
+                        fontSize: "0.8rem",
+                        color: "var(--muted)",
+                        marginTop: "-1px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        zIndex: 2,
+                      }}
+                    >
+                      <span>Palpites salvos para o Grupo {g.letter}</span>
+                      <span style={{ color: "var(--accent)", fontWeight: "bold" }}>
+                        Pontos Calculados
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {isEditing && (
         <aside className="mobile-dock" aria-label="Atalhos">
           <div className="mobile-dock-progress">
-            <strong>{filledCount}/{ALL_MATCHES.length}</strong>
+            <strong>{filledCount}/{leagueMatches.length}</strong>
             <span>preenchidos</span>
           </div>
           <button

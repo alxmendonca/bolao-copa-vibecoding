@@ -7,6 +7,13 @@ import {
 } from "firebase/database";
 import type { ScoreInput } from "./standings";
 import { ALL_MATCHES } from "../data/groupStage";
+import {
+  KNOCKOUT_MATCHES,
+  OITAVAS_MATCHES,
+  QUARTAS_MATCHES,
+  SEMI_MATCHES,
+  FINAL_MATCHES,
+} from "../data/knockoutStage";
 import { parseMatchDate } from "./scoring";
 
 export { isFirebaseConfigured };
@@ -23,6 +30,26 @@ export interface League {
   creatorEmail: string;
   rules: LeagueRules;
   createdAt: string;
+  isKnockout?: boolean;
+  phase?: "grupos" | "16-avos" | "oitavas" | "quartas" | "semi" | "final";
+}
+
+export function getLeagueMatches(phase: string | undefined): typeof ALL_MATCHES {
+  switch (phase) {
+    case "16-avos":
+      return KNOCKOUT_MATCHES;
+    case "oitavas":
+      return OITAVAS_MATCHES;
+    case "quartas":
+      return QUARTAS_MATCHES;
+    case "semi":
+      return SEMI_MATCHES;
+    case "final":
+      return FINAL_MATCHES;
+    case "grupos":
+    default:
+      return ALL_MATCHES;
+  }
 }
 
 export interface Participant {
@@ -51,10 +78,11 @@ export function generateUniqueHash(): string {
 }
 
 // Retorna a data limite de inscrições/edições a partir do Firebase ou do localStorage (modo mock).
-export async function getExpiryDate(): Promise<Date> {
+export async function getExpiryDate(isKnockout?: boolean): Promise<Date> {
   if (isFirebaseConfigured && db) {
     try {
-      const snap = await get(ref(db, "settings/expiryDate"));
+      const path = isKnockout ? "settings/expiryDateKnockout" : "settings/expiryDate";
+      const snap = await get(ref(db, path));
       if (snap.exists()) {
         const val = snap.val();
         if (val) {
@@ -65,16 +93,20 @@ export async function getExpiryDate(): Promise<Date> {
       console.error("Erro ao obter prazo de expiração do Firebase:", e);
     }
   } else {
-    const mockVal = localStorage.getItem("bolao_mock_expiry_date");
+    const key = isKnockout ? "bolao_mock_expiry_date_knockout" : "bolao_mock_expiry_date";
+    const mockVal = localStorage.getItem(key);
     if (mockVal) return new Date(mockVal);
   }
   // Default fallback: hoje às 16:00 BRT (19:00 UTC)
+  if (isKnockout) {
+    return new Date("2026-06-28T16:00:00-03:00");
+  }
   return new Date("2026-06-11T16:00:00-03:00");
 }
 
 // Verifica se o prazo limite de inscrições/edições expirou.
-export async function isSubmissionDeadlinePassed(): Promise<boolean> {
-  const deadline = await getExpiryDate();
+export async function isSubmissionDeadlinePassed(isKnockout?: boolean): Promise<boolean> {
+  const deadline = await getExpiryDate(isKnockout);
   const now = new Date();
   return now.getTime() > deadline.getTime();
 }
@@ -133,6 +165,7 @@ export async function createLeague(
   creatorEmail: string,
   rules: LeagueRules,
   creatorCode: string,
+  phase: string,
 ): Promise<string> {
   // Validar código do criador
   const expectedCode = import.meta.env.VITE_CREATOR_CODE || "copa2026";
@@ -140,14 +173,24 @@ export async function createLeague(
     throw new Error("Código de Criador inválido! (Não autorizado)");
   }
 
+  if (phase !== "16-avos") {
+    throw new Error("Somente a fase de 16-avos de final está disponível para criação de ligas no momento.");
+  }
+
   const leagueId = generateUniqueHash();
+  const createdDate = new Date();
+  const cutoffDate = new Date("2026-06-28T00:00:00-03:00");
+  const isKnockout = createdDate.getTime() >= cutoffDate.getTime();
+
   const newLeague: League = {
     id: leagueId,
     name: name.trim(),
     creatorName: creatorName.trim(),
     creatorEmail: creatorEmail.trim(),
     rules,
-    createdAt: new Date().toISOString(),
+    createdAt: createdDate.toISOString(),
+    isKnockout,
+    phase: "16-avos",
   };
 
   if (isFirebaseConfigured && db) {
@@ -164,12 +207,15 @@ export async function createLeague(
 
 // Retorna metadados de uma liga específica
 export async function getLeague(leagueId: string): Promise<League> {
+  const cutoffDate = new Date("2026-06-28T00:00:00-03:00").getTime();
+
   if (isFirebaseConfigured && db) {
     const snap = await get(ref(db, `leagues/${leagueId}`));
     if (!snap.exists()) {
       throw new Error("Liga não encontrada.");
     }
     const val = snap.val();
+    const isKnockout = val.isKnockout || (val.createdAt && new Date(val.createdAt).getTime() >= cutoffDate);
     // Exclui subnós de participantes para retornar apenas metadados da liga
     return {
       id: val.id,
@@ -178,6 +224,8 @@ export async function getLeague(leagueId: string): Promise<League> {
       creatorEmail: val.creatorEmail,
       rules: val.rules,
       createdAt: val.createdAt,
+      isKnockout: !!isKnockout,
+      phase: val.phase || (isKnockout ? "16-avos" : "grupos"),
     } as League;
   } else {
     const leagues = getMockLeagues();
@@ -185,7 +233,13 @@ export async function getLeague(leagueId: string): Promise<League> {
     if (!league) {
       throw new Error("Liga não encontrada.");
     }
-    return league;
+    const isKnockout = league.isKnockout || (league.createdAt && new Date(league.createdAt).getTime() >= cutoffDate);
+    const phase = league.phase || (isKnockout ? "16-avos" : "grupos");
+    return {
+      ...league,
+      isKnockout: !!isKnockout,
+      phase,
+    };
   }
 }
 
@@ -201,8 +255,11 @@ export async function joinLeague(
   passwordHash: string,
   scores: Record<string, ScoreInput>,
 ): Promise<string> {
-  if (await isSubmissionDeadlinePassed()) {
-    const deadline = await getExpiryDate();
+  const league = await getLeague(leagueId);
+  const isKnockout = league.isKnockout;
+
+  if (await isSubmissionDeadlinePassed(isKnockout)) {
+    const deadline = await getExpiryDate(isKnockout);
     const formatted = deadline.toLocaleString("pt-BR", {
       timeZone: "America/Sao_Paulo",
       day: "2-digit",
@@ -225,7 +282,8 @@ export async function joinLeague(
   // Desabilita palpites para jogos que já começaram
   const now = new Date().getTime();
   const sanitizedScores = { ...scores };
-  for (const match of ALL_MATCHES) {
+  const matches = getLeagueMatches(league.phase);
+  for (const match of matches) {
     const matchDate = match.scheduled ? parseMatchDate(match.scheduled) : 0;
     if (matchDate > 0 && matchDate < now) {
       sanitizedScores[match.id] = { home: "", away: "" };
@@ -294,8 +352,11 @@ export async function updateParticipantScores(
   passwordHashInput: string,
   scores: Record<string, ScoreInput>,
 ): Promise<void> {
-  if (await isSubmissionDeadlinePassed()) {
-    const deadline = await getExpiryDate();
+  const league = await getLeague(leagueId);
+  const isKnockout = league.isKnockout;
+
+  if (await isSubmissionDeadlinePassed(isKnockout)) {
+    const deadline = await getExpiryDate(isKnockout);
     const formatted = deadline.toLocaleString("pt-BR", {
       timeZone: "America/Sao_Paulo",
       day: "2-digit",
@@ -315,7 +376,8 @@ export async function updateParticipantScores(
   // Restaura os palpites originais para jogos que já começaram
   const now = new Date().getTime();
   const sanitizedScores = { ...scores };
-  for (const match of ALL_MATCHES) {
+  const matches = getLeagueMatches(league.phase);
+  for (const match of matches) {
     const matchDate = match.scheduled ? parseMatchDate(match.scheduled) : 0;
     if (matchDate > 0 && matchDate < now) {
       sanitizedScores[match.id] = p.scores[match.id] || { home: "", away: "" };
