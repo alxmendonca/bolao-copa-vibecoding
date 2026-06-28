@@ -215,13 +215,12 @@ export default function LeagueNew() {
                     src={logoPreview}
                     alt="Pré-visualização"
                     style={{
-                      maxHeight: "100px",
-                      maxWidth: "150px",
+                      maxHeight: "140px",
+                      maxWidth: "200px",
                       width: "auto",
                       height: "auto",
                       objectFit: "contain",
                       borderRadius: "8px",
-                      border: "1px solid var(--border)",
                     }}
                   />
                   <button
