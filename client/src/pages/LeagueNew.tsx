@@ -10,6 +10,26 @@ export default function LeagueNew() {
   const [result, setResult] = useState(10);
   const [creatorCode, setCreatorCode] = useState("");
   const [phase, setPhase] = useState("16-avos");
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 500 * 1024) {
+        alert("A imagem selecionada é muito grande! Escolha uma imagem de até 500KB.");
+        e.target.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setLogoBase64(base64String);
+        setLogoPreview(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +68,7 @@ export default function LeagueNew() {
         rules,
         creatorCode,
         phase,
+        logoBase64 || undefined,
       );
 
       const path = `/league/${leagueId}`;
@@ -171,6 +192,45 @@ export default function LeagueNew() {
               <p className="form-helper" style={{ marginTop: "0.25rem", fontSize: "0.8rem", color: "var(--muted)" }}>
                 Cada liga serve apenas para uma única fase. No momento, apenas os 16-avos estão disponíveis.
               </p>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="league-logo">
+                Logo/Imagem da Liga (Opcional)
+              </label>
+              <input
+                id="league-logo"
+                type="file"
+                accept="image/*"
+                className="form-input"
+                onChange={handleImageChange}
+                style={{ padding: "0.5rem" }}
+              />
+              <p className="form-helper" style={{ marginTop: "0.25rem", fontSize: "0.8rem", color: "var(--muted)" }}>
+                Escolha uma imagem quadrada para personalizar o cabeçalho da sua liga.
+              </p>
+              {logoPreview && (
+                <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <img
+                    src={logoPreview}
+                    alt="Pré-visualização"
+                    style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "8px", border: "1px solid var(--border)" }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ padding: "0.4rem 0.8rem", height: "auto", fontSize: "0.8rem" }}
+                    onClick={() => {
+                      setLogoBase64(null);
+                      setLogoPreview(null);
+                      const fileInput = document.getElementById("league-logo") as HTMLInputElement;
+                      if (fileInput) fileInput.value = "";
+                    }}
+                  >
+                    Remover
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="form-group">

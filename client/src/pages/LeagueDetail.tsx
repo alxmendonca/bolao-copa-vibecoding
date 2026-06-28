@@ -555,65 +555,83 @@ export default function LeagueDetail() {
       )}
 
       {/* Info Bar da Liga */}
-      <div className="league-info-bar">
-        <div className="league-info-details">
-          <h2>{league.name}</h2>
-          <div className="league-info-meta">
-            <span>Criador: <strong>{league.creatorName}</strong></span>
+      <div className="league-info-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1.5rem" }}>
+        <div style={{ display: "flex", flex: 1, justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1.5rem" }}>
+          <div className="league-info-details">
+            <h2>{league.name}</h2>
+            <div className="league-info-meta">
+              <span>Criador: <strong>{league.creatorName}</strong></span>
+            </div>
+            <div className="rules-list">
+              <span
+                className="rules-badge"
+                data-tooltip="Acertou o placar exato da partida (ex: palpite 2x1, placar oficial 2x1)."
+              >
+                Acertar Placar: <strong>+{league.rules.exact} pts</strong> <span>ℹ️</span>
+              </span>
+              <span
+                className="rules-badge"
+                data-tooltip="Errou o placar exato, mas acertou o vencedor ou o empate (ex: palpite 3x1, placar oficial 1x0)."
+              >
+                Acertar Resultado: <strong>+{league.rules.result} pts</strong> <span>ℹ️</span>
+              </span>
+            </div>
           </div>
-          <div className="rules-list">
-            <span
-              className="rules-badge"
-              data-tooltip="Acertou o placar exato da partida (ex: palpite 2x1, placar oficial 2x1)."
-            >
-              Acertar Placar: <strong>+{league.rules.exact} pts</strong> <span>ℹ️</span>
-            </span>
-            <span
-              className="rules-badge"
-              data-tooltip="Errou o placar exato, mas acertou o vencedor ou o empate (ex: palpite 3x1, placar oficial 1x0)."
-            >
-              Acertar Resultado: <strong>+{league.rules.result} pts</strong> <span>ℹ️</span>
-            </span>
-          </div>
-        </div>
 
-        <div className="league-info-action" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
-          {deadlinePassed ? (
-            <span
-              className="badge"
+          <div className="league-info-action" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+            {deadlinePassed ? (
+              <span
+                className="badge"
+                style={{
+                  background: "rgba(248, 113, 113, 0.15)",
+                  color: "var(--danger)",
+                  padding: "0.6rem 1rem",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  border: "1px solid rgba(248, 113, 113, 0.3)",
+                  display: "inline-block",
+                  textAlign: "center"
+                }}
+              >
+                🔒 Inscrições Encerradas
+              </span>
+            ) : (
+              <Link to={`/league/${league.id}/fill`} className="btn btn-primary" style={{ padding: "0.75rem 1.5rem" }}>
+                Participar do Bolão / Inserir Palpites
+              </Link>
+            )}
+
+            <button
+              onClick={handleExportLeague}
+              className="btn btn-ghost"
               style={{
-                background: "rgba(248, 113, 113, 0.15)",
-                color: "var(--danger)",
-                padding: "0.6rem 1rem",
-                borderRadius: "8px",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                border: "1px solid rgba(248, 113, 113, 0.3)",
-                display: "inline-block",
-                textAlign: "center"
+                padding: "0.75rem 1.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
               }}
             >
-              🔒 Inscrições Encerradas
-            </span>
-          ) : (
-            <Link to={`/league/${league.id}/fill`} className="btn btn-primary" style={{ padding: "0.75rem 1.5rem" }}>
-              Participar do Bolão / Inserir Palpites
-            </Link>
-          )}
-
-          <button
-            onClick={handleExportLeague}
-            className="btn btn-ghost"
-            style={{
-              padding: "0.75rem 1.5rem",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
-          >
-            📊 Exportar Liga (Excel)
-          </button>
+              📊 Exportar Liga (Excel)
+            </button>
+          </div>
         </div>
+
+        {league.logo && (
+          <div className="league-logo-container" style={{ flexShrink: 0 }}>
+            <img
+              src={league.logo}
+              alt="Logo da Liga"
+              style={{
+                width: "90px",
+                height: "90px",
+                objectFit: "cover",
+                borderRadius: "8px",
+                border: "2px solid var(--border)",
+              }}
+            />
+          </div>
+        )}
       </div>
       <div className="dashboard-layout">
         {/* Próximos 3 Jogos e Matriz de Palpites */}

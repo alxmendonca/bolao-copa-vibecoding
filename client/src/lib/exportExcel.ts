@@ -101,7 +101,7 @@ export function buildWorkbookBuffer(
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws["!protect"] = { password: "bolao2026" };
   const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, ws, "BET do Bolin");
+  XLSX.utils.book_append_sheet(book, ws, "Bolão Copa 2026");
 
   return XLSX.write(book, { type: "array", bookType: "xlsx" });
 }

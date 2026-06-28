@@ -32,6 +32,7 @@ export interface League {
   createdAt: string;
   isKnockout?: boolean;
   phase?: "grupos" | "16-avos" | "oitavas" | "quartas" | "semi" | "final";
+  logo?: string; // base64 encoded image data url
 }
 
 export function getLeagueMatches(phase: string | undefined): typeof ALL_MATCHES {
@@ -166,6 +167,7 @@ export async function createLeague(
   rules: LeagueRules,
   creatorCode: string,
   phase: string,
+  logo?: string,
 ): Promise<string> {
   // Validar código do criador
   const expectedCode = import.meta.env.VITE_CREATOR_CODE || "copa2026";
@@ -191,6 +193,7 @@ export async function createLeague(
     createdAt: createdDate.toISOString(),
     isKnockout,
     phase: "16-avos",
+    logo,
   };
 
   if (isFirebaseConfigured && db) {
@@ -226,6 +229,7 @@ export async function getLeague(leagueId: string): Promise<League> {
       createdAt: val.createdAt,
       isKnockout: !!isKnockout,
       phase: val.phase || (isKnockout ? "16-avos" : "grupos"),
+      logo: val.logo,
     } as League;
   } else {
     const leagues = getMockLeagues();

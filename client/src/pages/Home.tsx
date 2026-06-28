@@ -89,7 +89,7 @@ export default function Home() {
     <div className="home-page-wrap">
       <header className="hero">
         <div className="hero-inner">
-          <p className="hero-kicker">BET do Bolin — Copa do Mundo 2026</p>
+          <p className="hero-kicker">Bolão — Copa do Mundo 2026</p>
           <h1 className="hero-title">Fase de grupos</h1>
           <p className="hero-sub">
             48 seleções, 12 grupos (A–L), 72 jogos no calendário oficial. A
