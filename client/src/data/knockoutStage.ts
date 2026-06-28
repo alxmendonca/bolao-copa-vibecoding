@@ -68,7 +68,7 @@ export const KNOCKOUT_MATCHES: MatchDef[] = [
   mkK("16-AVOS-13", "16-avos", "por", "cro", "02 de jul às 20:00"),
   mkK("16-AVOS-14", "16-avos", "aus", "egy", "03 de jul às 15:00"),
   mkK("16-AVOS-15", "16-avos", "arg", "cpv", "03 de jul às 19:00"),
-  mkK("16-AVOS-16", "16-avos", "esp", "aut", "03 de jul às 23:00"),
+  mkK("16-AVOS-16", "16-avos", "esp", "aut", "02 de jul às 16:00"),
 ];
 
 export const OITAVAS_MATCHES: MatchDef[] = [
