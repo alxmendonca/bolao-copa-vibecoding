@@ -64,6 +64,10 @@ export default function LeagueDetail() {
   const [upcomingIndex, setUpcomingIndex] = useState(0);
   const [pastIndex, setPastIndex] = useState(0);
 
+  const isOitavasPreStart = useMemo(() => {
+    return league?.phase === "oitavas" && new Date().getTime() < new Date("2026-07-04T14:00:00-03:00").getTime();
+  }, [league]);
+
   const [hiddenLineIds, setHiddenLineIds] = useState<Record<string, boolean>>({});
   const [hoveredPoint, setHoveredPoint] = useState<{
     nickname: string;
@@ -78,12 +82,12 @@ export default function LeagueDetail() {
   const loadData = useCallback(async () => {
     if (!leagueId) return;
     try {
-      const [leagueData, participantsList, results, isPassed] = await Promise.all([
-        getLeague(leagueId),
+      const leagueData = await getLeague(leagueId);
+      const [participantsList, results] = await Promise.all([
         getParticipants(leagueId),
         getOfficialResults(),
-        isSubmissionDeadlinePassed(),
       ]);
+      const isPassed = await isSubmissionDeadlinePassed(leagueData.isKnockout, leagueData.phase);
       setLeague(leagueData);
       setParticipants(participantsList);
       setOfficialResults(results);
@@ -135,6 +139,10 @@ export default function LeagueDetail() {
 
   const handleExportLeague = () => {
     if (!league || participants.length === 0) return;
+    if (isOitavasPreStart) {
+      alert("A exportação da liga para Excel está desativada até o início da primeira partida de Oitavas de Final, para manter os palpites ocultos.");
+      return;
+    }
     try {
       downloadLeagueExcel(league, participants);
     } catch (err) {
@@ -858,7 +866,7 @@ export default function LeagueDetail() {
                     </div>
 
                     {/* Predictions Table */}
-                    <div style={{ overflow: "hidden", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(0, 0, 0, 0.1)" }}>
+                    <div style={{ overflow: "visible", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(0, 0, 0, 0.1)" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", tableLayout: "fixed" }}>
                         <thead>
                           <tr style={{ background: "rgba(255, 255, 255, 0.02)", borderBottom: "1px solid var(--border)" }}>
@@ -869,7 +877,9 @@ export default function LeagueDetail() {
                         <tbody>
                           {participants.map((p) => {
                             const pred = p.scores[activeMatch.id];
-                            const displayScore = pred && pred.home !== "" && pred.away !== "" ? `${pred.home} x ${pred.away}` : "-";
+                            const displayScore = isOitavasPreStart
+                              ? <span title="Os palpites estão ocultos até o início da primeira partida das Oitavas (04/07 às 14:00 BRT)" data-tooltip="Os palpites estão ocultos até o início da primeira partida das Oitavas (04/07 às 14:00 BRT)" style={{ cursor: "help" }}>🔒</span>
+                              : (pred && pred.home !== "" && pred.away !== "" ? `${pred.home} x ${pred.away}` : "-");
                             return (
                               <tr key={p.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.02)" }}>
                                 <td style={{ padding: "0.6rem 0.75rem", textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -1134,7 +1144,7 @@ export default function LeagueDetail() {
                       </div>
 
                       {/* Predictions Table */}
-                      <div style={{ overflow: "hidden", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(0, 0, 0, 0.1)" }}>
+                      <div style={{ overflow: "visible", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(0, 0, 0, 0.1)" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", tableLayout: "fixed" }}>
                           <thead>
                             <tr style={{ background: "rgba(255, 255, 255, 0.02)", borderBottom: "1px solid var(--border)" }}>

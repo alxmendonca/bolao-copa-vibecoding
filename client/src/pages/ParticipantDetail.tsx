@@ -30,6 +30,7 @@ export default function ParticipantDetail() {
 
   // Controle de edição
   const [isEditing, setIsEditing] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
@@ -39,6 +40,10 @@ export default function ParticipantDetail() {
 
   const [deadlinePassed, setDeadlinePassed] = useState(false);
 
+  const isOitavasPreStart = useMemo(() => {
+    return league?.phase === "oitavas" && new Date().getTime() < new Date("2026-07-04T14:00:00-03:00").getTime();
+  }, [league]);
+
   const loadData = async () => {
     if (!leagueId || !participantId) return;
     try {
@@ -46,7 +51,7 @@ export default function ParticipantDetail() {
       const [pData, results, isPassed] = await Promise.all([
         getParticipant(leagueId, participantId),
         getOfficialResults(),
-        isSubmissionDeadlinePassed(leagueData.isKnockout),
+        isSubmissionDeadlinePassed(leagueData.isKnockout, leagueData.phase),
       ]);
       setLeague(leagueData);
       setParticipant(pData);
@@ -100,6 +105,7 @@ export default function ParticipantDetail() {
       const hashed = await hashPassword(passwordInput);
       if (hashed === participant.passwordHash) {
         setIsEditing(true);
+        setIsAuthorized(true);
         setShowAuthForm(false);
         setPasswordInput(""); // Limpa o campo
       } else {
@@ -303,68 +309,83 @@ export default function ParticipantDetail() {
         )}
 
         {/* Grid de Palpites do Participante */}
-        {league?.isKnockout ? (
-          <div className="form-card" style={{ maxWidth: "100%", margin: "0 0 2.5rem 0", padding: "1.5rem" }}>
-            <h3 style={{ margin: "0 0 1.5rem 0" }}>Jogos de Mata-Mata</h3>
-            <ul className="match-list">
-              {leagueMatches.map((m) => (
-                <li key={m.id}>
-                  <MatchRow
-                    match={m}
-                    score={scores[m.id] ?? { home: "", away: "" }}
-                    onChange={onScoreChange}
-                    disabled={!isEditing}
-                    officialScore={officialResults?.scores?.[m.id]}
-                    rules={league?.rules}
-                  />
-                </li>
-              ))}
-            </ul>
+        {isOitavasPreStart && !isAuthorized ? (
+          <div className="form-card" style={{ textAlign: "center", padding: "3rem 1.5rem", maxWidth: "600px", margin: "0 auto 2.5rem auto" }}>
+            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔒</div>
+            <h3 style={{ margin: "0 0 0.5rem 0" }}>Palpites Ocultos</h3>
+            <p style={{ color: "var(--muted)", margin: "0.5rem 0 1.5rem 0" }}>
+              Os palpites deste participante estão ocultos até o início da primeira partida da fase de Oitavas de Final (04/07 às 14:00 BRT).
+            </p>
+            {!deadlinePassed && (
+              <p style={{ fontSize: "0.9rem", color: "var(--muted)", borderTop: "1px solid var(--border)", paddingTop: "1rem", marginTop: "1rem" }}>
+                Se esta página é sua, clique no botão <strong>"Editar Meus Palpites"</strong> acima e digite sua senha para visualizar e editar seus palpites.
+              </p>
+            )}
           </div>
         ) : (
-          <div className="groups-stack">
-            {GROUPS.map((g) => {
-              // Se o admin lançou resultados oficiais, podemos exibir o feedback de pontos de cada jogo!
-              // Para isso, vamos passar a classificação do grupo normalmente, mas mostrar no layout
-              return (
-                <div key={g.letter} style={{ position: "relative" }}>
-                  <GroupSection
-                    group={g}
-                    scores={scores}
-                    onScoreChange={onScoreChange}
-                    disabled={!isEditing}
-                    officialScores={officialResults?.scores}
-                    rules={league?.rules}
-                  />
-                  
-                  {/* Overlay de pontos obtidos em cada jogo se houver resultado oficial */}
-                  {officialResults && Object.keys(officialResults.scores).length > 0 && (
-                    <div
-                      style={{
-                        padding: "0.5rem 1rem",
-                        background: "rgba(20, 28, 40, 0.95)",
-                        borderTop: "1px solid var(--border)",
-                        borderBottomLeftRadius: "var(--radius)",
-                        borderBottomRightRadius: "var(--radius)",
-                        fontSize: "0.8rem",
-                        color: "var(--muted)",
-                        marginTop: "-1px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        zIndex: 2,
-                      }}
-                    >
-                      <span>Palpites salvos para o Grupo {g.letter}</span>
-                      <span style={{ color: "var(--accent)", fontWeight: "bold" }}>
-                        Pontos Calculados
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          league?.isKnockout ? (
+            <div className="form-card" style={{ maxWidth: "100%", margin: "0 0 2.5rem 0", padding: "1.5rem" }}>
+              <h3 style={{ margin: "0 0 1.5rem 0" }}>Jogos de Mata-Mata</h3>
+              <ul className="match-list">
+                {leagueMatches.map((m) => (
+                  <li key={m.id}>
+                    <MatchRow
+                      match={m}
+                      score={scores[m.id] ?? { home: "", away: "" }}
+                      onChange={onScoreChange}
+                      disabled={!isEditing}
+                      officialScore={officialResults?.scores?.[m.id]}
+                      rules={league?.rules}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="groups-stack">
+              {GROUPS.map((g) => {
+                // Se o admin lançou resultados oficiais, podemos exibir o feedback de pontos de cada jogo!
+                // Para isso, vamos passar a classificação do grupo normalmente, mas mostrar no layout
+                return (
+                  <div key={g.letter} style={{ position: "relative" }}>
+                    <GroupSection
+                      group={g}
+                      scores={scores}
+                      onScoreChange={onScoreChange}
+                      disabled={!isEditing}
+                      officialScores={officialResults?.scores}
+                      rules={league?.rules}
+                    />
+                    
+                    {/* Overlay de pontos obtidos em cada jogo se houver resultado oficial */}
+                    {officialResults && Object.keys(officialResults.scores).length > 0 && (
+                      <div
+                        style={{
+                          padding: "0.5rem 1rem",
+                          background: "rgba(20, 28, 40, 0.95)",
+                          borderTop: "1px solid var(--border)",
+                          borderBottomLeftRadius: "var(--radius)",
+                          borderBottomRightRadius: "var(--radius)",
+                          fontSize: "0.8rem",
+                          color: "var(--muted)",
+                          marginTop: "-1px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          zIndex: 2,
+                        }}
+                      >
+                        <span>Palpites salvos para o Grupo {g.letter}</span>
+                        <span style={{ color: "var(--accent)", fontWeight: "bold" }}>
+                          Pontos Calculados
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )
         )}
       </div>
 

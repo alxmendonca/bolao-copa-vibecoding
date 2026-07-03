@@ -72,14 +72,14 @@ export const KNOCKOUT_MATCHES: MatchDef[] = [
 ];
 
 export const OITAVAS_MATCHES: MatchDef[] = [
-  { id: "OITAVAS-1", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-1" }, away: { id: "TBD", name: "Vencedor 16-AVOS-4" }, scheduled: "04 de jul às 16:00" },
-  { id: "OITAVAS-2", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-3" }, away: { id: "TBD", name: "Vencedor 16-AVOS-6" }, scheduled: "04 de jul às 20:00" },
-  { id: "OITAVAS-3", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-2" }, away: { id: "TBD", name: "Vencedor 16-AVOS-5" }, scheduled: "05 de jul às 16:00" },
-  { id: "OITAVAS-4", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-7" }, away: { id: "TBD", name: "Vencedor 16-AVOS-8" }, scheduled: "05 de jul às 20:00" },
-  { id: "OITAVAS-5", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-10" }, away: { id: "TBD", name: "Vencedor 16-AVOS-12" }, scheduled: "06 de jul às 16:00" },
-  { id: "OITAVAS-6", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-9" }, away: { id: "TBD", name: "Vencedor 16-AVOS-11" }, scheduled: "06 de jul às 20:00" },
-  { id: "OITAVAS-7", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-13" }, away: { id: "TBD", name: "Vencedor 16-AVOS-16" }, scheduled: "07 de jul às 16:00" },
-  { id: "OITAVAS-8", group: "Oitavas", home: { id: "TBD", name: "Vencedor 16-AVOS-15" }, away: { id: "TBD", name: "Vencedor 16-AVOS-14" }, scheduled: "07 de jul às 20:00" },
+  { id: "OITAVAS-1", group: "Oitavas", home: KNOCKOUT_TEAMS.par, away: KNOCKOUT_TEAMS.fra, scheduled: "04 de jul às 18:00" },
+  { id: "OITAVAS-2", group: "Oitavas", home: KNOCKOUT_TEAMS.can, away: KNOCKOUT_TEAMS.mar, scheduled: "04 de jul às 14:00" },
+  { id: "OITAVAS-3", group: "Oitavas", home: KNOCKOUT_TEAMS.por, away: KNOCKOUT_TEAMS.esp, scheduled: "06 de jul às 16:00" },
+  { id: "OITAVAS-4", group: "Oitavas", home: KNOCKOUT_TEAMS.usa, away: KNOCKOUT_TEAMS.bel, scheduled: "06 de jul às 21:00" },
+  { id: "OITAVAS-5", group: "Oitavas", home: KNOCKOUT_TEAMS.bra, away: KNOCKOUT_TEAMS.nor, scheduled: "05 de jul às 17:00" },
+  { id: "OITAVAS-6", group: "Oitavas", home: KNOCKOUT_TEAMS.mex, away: KNOCKOUT_TEAMS.eng, scheduled: "05 de jul às 21:00" },
+  { id: "OITAVAS-7", group: "Oitavas", home: { id: "TBD", name: "Argentina OU Cabo Verde" }, away: KNOCKOUT_TEAMS.egy, scheduled: "07 de jul às 13:00" },
+  { id: "OITAVAS-8", group: "Oitavas", home: KNOCKOUT_TEAMS.sui, away: { id: "TBD", name: "Colômbia OU Gana" }, scheduled: "07 de jul às 17:00" },
 ];
 
 export const QUARTAS_MATCHES: MatchDef[] = [

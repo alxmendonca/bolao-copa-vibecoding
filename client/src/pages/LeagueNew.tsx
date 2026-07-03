@@ -188,13 +188,13 @@ export default function LeagueNew() {
               >
                 <option value="grupos" disabled>Fase de Grupos (Já passou)</option>
                 <option value="16-avos">16-avos de Final (Disponível)</option>
-                <option value="oitavas" disabled>Oitavas de Final (Ainda sem times definidos)</option>
+                <option value="oitavas">Oitavas de Final (Disponível)</option>
                 <option value="quartas" disabled>Quartas de Final (Ainda sem times definidos)</option>
                 <option value="semi" disabled>Semifinais (Ainda sem times definidos)</option>
                 <option value="final" disabled>Final (Ainda sem times definidos)</option>
               </select>
               <p className="form-helper" style={{ marginTop: "0.25rem", fontSize: "0.8rem", color: "var(--muted)" }}>
-                Cada liga serve apenas para uma única fase. No momento, apenas os 16-avos estão disponíveis.
+                Cada liga serve apenas para uma única fase. No momento, os 16-avos e as Oitavas de Final estão disponíveis.
               </p>
             </div>
 

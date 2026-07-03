@@ -79,10 +79,15 @@ export function generateUniqueHash(): string {
 }
 
 // Retorna a data limite de inscrições/edições a partir do Firebase ou do localStorage (modo mock).
-export async function getExpiryDate(isKnockout?: boolean): Promise<Date> {
+export async function getExpiryDate(isKnockout?: boolean, phase?: string): Promise<Date> {
   if (isFirebaseConfigured && db) {
     try {
-      const path = isKnockout ? "settings/expiryDateKnockout" : "settings/expiryDate";
+      let path = "settings/expiryDate";
+      if (phase === "oitavas") {
+        path = "settings/expiryDateOitavas";
+      } else if (isKnockout) {
+        path = "settings/expiryDateKnockout";
+      }
       const snap = await get(ref(db, path));
       if (snap.exists()) {
         const val = snap.val();
@@ -94,11 +99,19 @@ export async function getExpiryDate(isKnockout?: boolean): Promise<Date> {
       console.error("Erro ao obter prazo de expiração do Firebase:", e);
     }
   } else {
-    const key = isKnockout ? "bolao_mock_expiry_date_knockout" : "bolao_mock_expiry_date";
+    let key = "bolao_mock_expiry_date";
+    if (phase === "oitavas") {
+      key = "bolao_mock_expiry_date_oitavas";
+    } else if (isKnockout) {
+      key = "bolao_mock_expiry_date_knockout";
+    }
     const mockVal = localStorage.getItem(key);
     if (mockVal) return new Date(mockVal);
   }
   // Default fallback: hoje às 16:00 BRT (19:00 UTC)
+  if (phase === "oitavas") {
+    return new Date("2026-07-04T14:00:00-03:00");
+  }
   if (isKnockout) {
     return new Date("2026-06-28T16:00:00-03:00");
   }
@@ -106,8 +119,8 @@ export async function getExpiryDate(isKnockout?: boolean): Promise<Date> {
 }
 
 // Verifica se o prazo limite de inscrições/edições expirou.
-export async function isSubmissionDeadlinePassed(isKnockout?: boolean): Promise<boolean> {
-  const deadline = await getExpiryDate(isKnockout);
+export async function isSubmissionDeadlinePassed(isKnockout?: boolean, phase?: string): Promise<boolean> {
+  const deadline = await getExpiryDate(isKnockout, phase);
   const now = new Date();
   return now.getTime() > deadline.getTime();
 }
@@ -175,8 +188,8 @@ export async function createLeague(
     throw new Error("Código de Criador inválido! (Não autorizado)");
   }
 
-  if (phase !== "16-avos") {
-    throw new Error("Somente a fase de 16-avos de final está disponível para criação de ligas no momento.");
+  if (phase !== "16-avos" && phase !== "oitavas") {
+    throw new Error("Somente as fases de 16-avos e oitavas de final estão disponíveis para criação de ligas no momento.");
   }
 
   const leagueId = generateUniqueHash();
@@ -192,7 +205,7 @@ export async function createLeague(
     rules,
     createdAt: createdDate.toISOString(),
     isKnockout,
-    phase: "16-avos",
+    phase: phase as League["phase"],
     logo,
   };
 
@@ -260,10 +273,9 @@ export async function joinLeague(
   scores: Record<string, ScoreInput>,
 ): Promise<string> {
   const league = await getLeague(leagueId);
-  const isKnockout = league.isKnockout;
 
-  if (await isSubmissionDeadlinePassed(isKnockout)) {
-    const deadline = await getExpiryDate(isKnockout);
+  if (await isSubmissionDeadlinePassed(league.isKnockout, league.phase)) {
+    const deadline = await getExpiryDate(league.isKnockout, league.phase);
     const formatted = deadline.toLocaleString("pt-BR", {
       timeZone: "America/Sao_Paulo",
       day: "2-digit",
@@ -357,10 +369,9 @@ export async function updateParticipantScores(
   scores: Record<string, ScoreInput>,
 ): Promise<void> {
   const league = await getLeague(leagueId);
-  const isKnockout = league.isKnockout;
 
-  if (await isSubmissionDeadlinePassed(isKnockout)) {
-    const deadline = await getExpiryDate(isKnockout);
+  if (await isSubmissionDeadlinePassed(league.isKnockout, league.phase)) {
+    const deadline = await getExpiryDate(league.isKnockout, league.phase);
     const formatted = deadline.toLocaleString("pt-BR", {
       timeZone: "America/Sao_Paulo",
       day: "2-digit",

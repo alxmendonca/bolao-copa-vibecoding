@@ -45,7 +45,7 @@ export default function LeagueFill() {
     const loadLeague = async () => {
       try {
         const l = await getLeague(leagueId);
-        const isPassed = await isSubmissionDeadlinePassed(l.isKnockout);
+        const isPassed = await isSubmissionDeadlinePassed(l.isKnockout, l.phase);
         setLeague(l);
         setDeadlinePassed(isPassed);
 
@@ -104,7 +104,7 @@ export default function LeagueFill() {
     setError(null);
 
     if (deadlinePassed) {
-      const deadline = await getExpiryDate(league?.isKnockout);
+      const deadline = await getExpiryDate(league?.isKnockout, league?.phase);
       const formatted = deadline.toLocaleString("pt-BR", {
         timeZone: "America/Sao_Paulo",
         day: "2-digit",
