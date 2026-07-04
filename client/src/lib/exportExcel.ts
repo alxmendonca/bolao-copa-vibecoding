@@ -3,7 +3,8 @@ import type { MatchDef } from "../data/groupStage";
 import { ALL_MATCHES } from "../data/groupStage";
 import { KNOCKOUT_MATCHES } from "../data/knockoutStage";
 import type { ScoreInput } from "./standings";
-import type { League, Participant } from "./firebaseService";
+import { getLeagueMatches, type League, type Participant } from "./firebaseService";
+import { parseMatchDate } from "./scoring";
 
 export type ExportMeta = {
   participantName: string;
@@ -187,8 +188,13 @@ export function downloadLeagueExcel(
   league: League,
   participants: Participant[],
 ): void {
-  // Ordenar partidas por grupo (matches já vem ordenada de A a L / mata-mata)
-  const matches = league.isKnockout ? KNOCKOUT_MATCHES : ALL_MATCHES;
+  // Obter as partidas corretas da fase da liga ordenadas cronologicamente
+  const rawMatches = getLeagueMatches(league.phase);
+  const matches = [...rawMatches].sort((a, b) => {
+    const ta = a.scheduled ? parseMatchDate(a.scheduled) : 0;
+    const tb = b.scheduled ? parseMatchDate(b.scheduled) : 0;
+    return ta - tb;
+  });
 
   // 1. Calcular spans dos grupos para fazer a mesclagem correta no cabeçalho
   const groupSpans: { group: string; span: number }[] = [];
