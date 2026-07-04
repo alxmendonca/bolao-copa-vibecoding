@@ -589,8 +589,13 @@ export default function LeagueDetail() {
         <div style={{ display: "flex", flex: 1, justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1.5rem" }}>
           <div className="league-info-details">
             <h2>{league.name}</h2>
-            <div className="league-info-meta">
+            <div className="league-info-meta" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center", marginTop: "0.25rem" }}>
               <span>Criador: <strong>{league.creatorName}</strong></span>
+              {formattedDeadline && (
+                <span className="deadline-indicator" style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "var(--muted)", fontSize: "0.9rem" }}>
+                  <span>⏳</span> Prazo: <strong style={{ color: deadlinePassed ? "var(--danger)" : "var(--success)" }}>{formattedDeadline} BRT</strong>
+                </span>
+              )}
             </div>
             <div className="rules-list">
               <span

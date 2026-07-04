@@ -78,8 +78,8 @@ export const OITAVAS_MATCHES: MatchDef[] = [
   { id: "OITAVAS-4", group: "Oitavas", home: KNOCKOUT_TEAMS.usa, away: KNOCKOUT_TEAMS.bel, scheduled: "06 de jul às 21:00" },
   { id: "OITAVAS-5", group: "Oitavas", home: KNOCKOUT_TEAMS.bra, away: KNOCKOUT_TEAMS.nor, scheduled: "05 de jul às 17:00" },
   { id: "OITAVAS-6", group: "Oitavas", home: KNOCKOUT_TEAMS.mex, away: KNOCKOUT_TEAMS.eng, scheduled: "05 de jul às 21:00" },
-  { id: "OITAVAS-7", group: "Oitavas", home: { id: "TBD", name: "Argentina OU Cabo Verde" }, away: KNOCKOUT_TEAMS.egy, scheduled: "07 de jul às 13:00" },
-  { id: "OITAVAS-8", group: "Oitavas", home: KNOCKOUT_TEAMS.sui, away: { id: "TBD", name: "Colômbia OU Gana" }, scheduled: "07 de jul às 17:00" },
+  { id: "OITAVAS-7", group: "Oitavas", home: KNOCKOUT_TEAMS.arg, away: KNOCKOUT_TEAMS.egy, scheduled: "07 de jul às 13:00" },
+  { id: "OITAVAS-8", group: "Oitavas", home: KNOCKOUT_TEAMS.sui, away: KNOCKOUT_TEAMS.col, scheduled: "07 de jul às 17:00" },
 ];
 
 export const QUARTAS_MATCHES: MatchDef[] = [
