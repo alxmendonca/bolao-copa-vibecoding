@@ -14,6 +14,7 @@ import {
 } from "../lib/firebaseService";
 import { hashPassword } from "../lib/hash";
 import type { ScoreInput } from "../lib/standings";
+import { parseMatchDate } from "../lib/scoring";
 
 
 
@@ -87,7 +88,12 @@ export default function LeagueFill() {
   );
 
   const leagueMatches = useMemo(() => {
-    return getLeagueMatches(league?.phase);
+    const list = getLeagueMatches(league?.phase) || [];
+    return [...list].sort((a, b) => {
+      const ta = a.scheduled ? parseMatchDate(a.scheduled) : 0;
+      const tb = b.scheduled ? parseMatchDate(b.scheduled) : 0;
+      return ta - tb;
+    });
   }, [league]);
 
   const filledCount = useMemo(() => {

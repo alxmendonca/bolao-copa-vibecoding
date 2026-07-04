@@ -17,7 +17,7 @@ import {
   type OfficialResults,
 } from "../lib/firebaseService";
 import { hashPassword } from "../lib/hash";
-import { calculateParticipantTotalScore } from "../lib/scoring";
+import { calculateParticipantTotalScore, parseMatchDate } from "../lib/scoring";
 import type { ScoreInput } from "../lib/standings";
 
 export default function ParticipantDetail() {
@@ -161,7 +161,12 @@ export default function ParticipantDetail() {
   };
 
   const leagueMatches = useMemo(() => {
-    return getLeagueMatches(league?.phase);
+    const list = getLeagueMatches(league?.phase) || [];
+    return [...list].sort((a, b) => {
+      const ta = a.scheduled ? parseMatchDate(a.scheduled) : 0;
+      const tb = b.scheduled ? parseMatchDate(b.scheduled) : 0;
+      return ta - tb;
+    });
   }, [league]);
 
   const filledCount = useMemo(() => {
