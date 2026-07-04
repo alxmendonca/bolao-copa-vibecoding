@@ -5,6 +5,7 @@ import {
   getParticipants,
   getOfficialResults,
   isSubmissionDeadlinePassed,
+  getExpiryDate,
   getLeagueMatches,
   isFirebaseConfigured,
   type League,
@@ -58,6 +59,7 @@ export default function LeagueDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const [deadlinePassed, setDeadlinePassed] = useState(false);
+  const [deadlineDate, setDeadlineDate] = useState<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(() => new Date().getTime());
   const [matchViewMode, setMatchViewMode] = useState<"next3" | "today">("next3");
 
@@ -65,8 +67,20 @@ export default function LeagueDetail() {
   const [pastIndex, setPastIndex] = useState(0);
 
   const isOitavasPreStart = useMemo(() => {
-    return league?.phase === "oitavas" && new Date().getTime() < new Date("2026-07-04T14:00:00-03:00").getTime();
-  }, [league]);
+    return league?.phase === "oitavas" && !deadlinePassed;
+  }, [league, deadlinePassed]);
+
+  const formattedDeadline = useMemo(() => {
+    if (!deadlineDate) return "";
+    return deadlineDate.toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [deadlineDate]);
 
   const [hiddenLineIds, setHiddenLineIds] = useState<Record<string, boolean>>({});
   const [hoveredPoint, setHoveredPoint] = useState<{
@@ -83,15 +97,17 @@ export default function LeagueDetail() {
     if (!leagueId) return;
     try {
       const leagueData = await getLeague(leagueId);
-      const [participantsList, results] = await Promise.all([
+      const [participantsList, results, isPassed, limitDate] = await Promise.all([
         getParticipants(leagueId),
         getOfficialResults(),
+        isSubmissionDeadlinePassed(leagueData.isKnockout, leagueData.phase),
+        getExpiryDate(leagueData.isKnockout, leagueData.phase),
       ]);
-      const isPassed = await isSubmissionDeadlinePassed(leagueData.isKnockout, leagueData.phase);
       setLeague(leagueData);
       setParticipants(participantsList);
       setOfficialResults(results);
       setDeadlinePassed(isPassed);
+      setDeadlineDate(limitDate);
     } catch (err: any) {
       setError(err.message || "Erro ao carregar dados da liga.");
     } finally {
@@ -878,7 +894,7 @@ export default function LeagueDetail() {
                           {participants.map((p) => {
                             const pred = p.scores[activeMatch.id];
                             const displayScore = isOitavasPreStart
-                              ? <span title="Os palpites estão ocultos até o início da primeira partida das Oitavas (04/07 às 14:00 BRT)" data-tooltip="Os palpites estão ocultos até o início da primeira partida das Oitavas (04/07 às 14:00 BRT)" style={{ cursor: "help" }}>🔒</span>
+                              ? <span title={`Os palpites estão ocultos até o encerramento do prazo (${formattedDeadline} BRT)`} data-tooltip={`Os palpites estão ocultos até o encerramento do prazo (${formattedDeadline} BRT)`} style={{ cursor: "help" }}>🔒</span>
                               : (pred && pred.home !== "" && pred.away !== "" ? `${pred.home} x ${pred.away}` : "-");
                             return (
                               <tr key={p.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.02)" }}>

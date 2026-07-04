@@ -9,6 +9,7 @@ import {
   getOfficialResults,
   updateParticipantScores,
   isSubmissionDeadlinePassed,
+  getExpiryDate,
   getLeagueMatches,
   isFirebaseConfigured,
   type League,
@@ -39,25 +40,40 @@ export default function ParticipantDetail() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const [deadlinePassed, setDeadlinePassed] = useState(false);
+  const [deadlineDate, setDeadlineDate] = useState<Date | null>(null);
 
   const isOitavasPreStart = useMemo(() => {
-    return league?.phase === "oitavas" && new Date().getTime() < new Date("2026-07-04T14:00:00-03:00").getTime();
-  }, [league]);
+    return league?.phase === "oitavas" && !deadlinePassed;
+  }, [league, deadlinePassed]);
+
+  const formattedDeadline = useMemo(() => {
+    if (!deadlineDate) return "";
+    return deadlineDate.toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [deadlineDate]);
 
   const loadData = async () => {
     if (!leagueId || !participantId) return;
     try {
       const leagueData = await getLeague(leagueId);
-      const [pData, results, isPassed] = await Promise.all([
+      const [pData, results, isPassed, limitDate] = await Promise.all([
         getParticipant(leagueId, participantId),
         getOfficialResults(),
         isSubmissionDeadlinePassed(leagueData.isKnockout, leagueData.phase),
+        getExpiryDate(leagueData.isKnockout, leagueData.phase),
       ]);
       setLeague(leagueData);
       setParticipant(pData);
       setScores(pData.scores);
       setOfficialResults(results);
       setDeadlinePassed(isPassed);
+      setDeadlineDate(limitDate);
     } catch (err: any) {
       setError(err.message || "Erro ao carregar os palpites.");
     } finally {
@@ -314,7 +330,7 @@ export default function ParticipantDetail() {
             <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔒</div>
             <h3 style={{ margin: "0 0 0.5rem 0" }}>Palpites Ocultos</h3>
             <p style={{ color: "var(--muted)", margin: "0.5rem 0 1.5rem 0" }}>
-              Os palpites deste participante estão ocultos até o início da primeira partida da fase de Oitavas de Final (04/07 às 14:00 BRT).
+              Os palpites deste participante estão ocultos até o encerramento do prazo de envio e edição da fase de Oitavas de Final ({formattedDeadline} BRT).
             </p>
             {!deadlinePassed && (
               <p style={{ fontSize: "0.9rem", color: "var(--muted)", borderTop: "1px solid var(--border)", paddingTop: "1rem", marginTop: "1rem" }}>
