@@ -7,11 +7,12 @@ import { calculateMatchPoints, parseMatchDate } from "../lib/scoring";
 type Props = {
   match: MatchDef;
   score: ScoreInput;
-  onChange: (matchId: string, field: "home" | "away", value: string) => void;
+  onChange: (matchId: string, field: "home" | "away" | "qualified", value: string) => void;
   disabled?: boolean;
   officialScore?: ScoreInput;
   rules?: { exact: number; result: number };
   isAdmin?: boolean;
+  lockReason?: string;
 };
 
 function focusNextInput(current: HTMLInputElement): void {
@@ -24,7 +25,7 @@ function focusNextInput(current: HTMLInputElement): void {
   }
 }
 
-export function MatchRow({ match, score, onChange, disabled, officialScore, rules, isAdmin }: Props) {
+export function MatchRow({ match, score, onChange, disabled, officialScore, rules, isAdmin, lockReason }: Props) {
   const awayRef = useRef<HTMLInputElement>(null);
 
   const homeOk = validateScoreField(score.home);
@@ -170,12 +171,45 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
         <span className="team-name away">{match.away.name}</span>
       </div>
 
+      {isAdmin && (match.id.startsWith("QUARTAS-") || match.id.startsWith("SEMI-") || match.id.startsWith("FINAL-") || match.id.startsWith("OITAVAS-") || match.id.startsWith("16-AVOS-")) && score.home.trim() !== "" && score.away.trim() !== "" && score.home === score.away && (
+        <div className="shootout-winner-select" style={{ marginTop: "0.5rem", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "0.5rem", justifyContent: "center", width: "100%" }}>
+          <span style={{ color: "var(--muted)" }}>Vencedor nos pênaltis:</span>
+          <button
+            type="button"
+            className={`btn ${score.qualified === match.home.id ? "btn-primary" : "btn-ghost"}`}
+            style={{ padding: "0.2rem 0.5rem", fontSize: "0.7rem", height: "auto" }}
+            onClick={() => onChange(match.id, "qualified", match.home.id)}
+          >
+            {match.home.name}
+          </button>
+          <button
+            type="button"
+            className={`btn ${score.qualified === match.away.id ? "btn-primary" : "btn-ghost"}`}
+            style={{ padding: "0.2rem 0.5rem", fontSize: "0.7rem", height: "auto" }}
+            onClick={() => onChange(match.id, "qualified", match.away.id)}
+          >
+            {match.away.name}
+          </button>
+        </div>
+      )}
+
       {hasOfficial && (
         <div className="match-official-result">
           <span className="official-badge">
             Placar Oficial: <strong>{officialScore!.home} × {officialScore!.away}</strong>
+            {officialScore!.qualified && (
+              <span style={{ marginLeft: "0.5rem", color: "var(--primary)", fontSize: "0.8rem" }}>
+                (Pênaltis: {officialScore!.qualified === match.home.id ? match.home.name : match.away.name} classificado)
+              </span>
+            )}
           </span>
           {pointsLabel && <span className="points-label">{pointsLabel}</span>}
+        </div>
+      )}
+
+      {lockReason && !isAdmin && (
+        <div className="match-lock-reason" style={{ fontSize: "0.8rem", color: "var(--muted)", fontStyle: "italic", textAlign: "center", marginTop: "0.5rem", width: "100%" }}>
+          ⚠️ {lockReason}
         </div>
       )}
     </div>

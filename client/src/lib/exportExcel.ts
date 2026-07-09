@@ -1,7 +1,5 @@
 import * as XLSX from "xlsx-js-style";
 import type { MatchDef } from "../data/groupStage";
-import { ALL_MATCHES } from "../data/groupStage";
-import { KNOCKOUT_MATCHES } from "../data/knockoutStage";
 import type { ScoreInput } from "./standings";
 import { getLeagueMatches, type League, type Participant } from "./firebaseService";
 import { parseMatchDate } from "./scoring";

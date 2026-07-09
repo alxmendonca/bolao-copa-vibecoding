@@ -15,6 +15,7 @@ import {
 import { rankParticipants, calculateMatchPoints, parseMatchDate } from "../lib/scoring";
 import { downloadLeagueExcel } from "../lib/exportExcel";
 import html2canvas from "html2canvas";
+import { resolveKnockoutMatches } from "../data/knockoutStage";
 
 // Helper para verificar se a partida é hoje
 const isMatchToday = (scheduledStr: string, currentTimestamp: number): boolean => {
@@ -59,6 +60,7 @@ export default function LeagueDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const [deadlinePassed, setDeadlinePassed] = useState(false);
+  const [joinDeadlinePassed, setJoinDeadlinePassed] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(() => new Date().getTime());
   const [matchViewMode, setMatchViewMode] = useState<"next3" | "today">("next3");
@@ -108,6 +110,13 @@ export default function LeagueDetail() {
       setOfficialResults(results);
       setDeadlinePassed(isPassed);
       setDeadlineDate(limitDate);
+      
+      let joinPassed = isPassed;
+      if (leagueData.phase === "fase-final") {
+        const quartasLimit = await getExpiryDate(leagueData.isKnockout, "quartas");
+        joinPassed = new Date().getTime() > quartasLimit.getTime();
+      }
+      setJoinDeadlinePassed(joinPassed);
     } catch (err: any) {
       setError(err.message || "Erro ao carregar dados da liga.");
     } finally {
@@ -117,6 +126,10 @@ export default function LeagueDetail() {
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(() => {
+      loadData();
+    }, 60000);
+    return () => clearInterval(interval);
   }, [loadData]);
 
   useEffect(() => {
@@ -168,8 +181,12 @@ export default function LeagueDetail() {
 
   // Obter a lista de partidas correspondente à fase da liga
   const leagueMatches = useMemo(() => {
-    return getLeagueMatches(league?.phase);
-  }, [league]);
+    let list = getLeagueMatches(league?.phase) || [];
+    if (league?.phase === "fase-final" && officialResults) {
+      list = resolveKnockoutMatches(list, officialResults.scores || {});
+    }
+    return list;
+  }, [league, officialResults]);
 
   // Calcula classificação geral dos participantes
   const rankedParticipants = useMemo(() => {
@@ -614,17 +631,16 @@ export default function LeagueDetail() {
           </div>
 
           <div className="league-info-action" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
-            {deadlinePassed ? (
+            {joinDeadlinePassed ? (
               <span
-                className="badge"
                 style={{
                   background: "rgba(248, 113, 113, 0.15)",
                   color: "var(--danger)",
                   padding: "0.6rem 1rem",
+                  border: "1px solid rgba(248, 113, 113, 0.3)",
                   borderRadius: "8px",
                   fontSize: "0.85rem",
                   fontWeight: 600,
-                  border: "1px solid rgba(248, 113, 113, 0.3)",
                   display: "inline-block",
                   textAlign: "center"
                 }}
@@ -946,7 +962,7 @@ export default function LeagueDetail() {
               <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
                 Ainda não há nenhum participante cadastrado nesta liga.
               </p>
-              {!deadlinePassed && (
+              {!joinDeadlinePassed && (
                 <Link to={`/league/${league.id}/fill`} className="btn btn-primary">
                   Ser o Primeiro a Participar!
                 </Link>

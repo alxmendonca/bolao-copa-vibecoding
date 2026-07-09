@@ -6,6 +6,7 @@ import {
   QUARTAS_MATCHES,
   SEMI_MATCHES,
   FINAL_MATCHES,
+  resolveKnockoutMatches,
 } from "../data/knockoutStage";
 import { GroupSection } from "../components/GroupSection";
 import { MatchRow } from "../components/MatchRow";
@@ -30,7 +31,7 @@ const TOTAL_MATCHES = [
 function emptyScores(): Record<string, ScoreInput> {
   const o: Record<string, ScoreInput> = {};
   for (const m of TOTAL_MATCHES) {
-    o[m.id] = { home: "", away: "" };
+    o[m.id] = { home: "", away: "", qualified: "" };
   }
   return o;
 }
@@ -43,7 +44,7 @@ function mergeStoredScores(
   for (const m of TOTAL_MATCHES) {
     const s = stored[m.id];
     if (s && typeof s.home === "string" && typeof s.away === "string") {
-      base[m.id] = { home: s.home, away: s.away };
+      base[m.id] = { home: s.home, away: s.away, qualified: s.qualified || "" };
     }
   }
   return base;
@@ -110,18 +111,38 @@ export default function AdminPanel() {
   };
 
   const onScoreChange = useCallback(
-    (matchId: string, field: "home" | "away", value: string) => {
-      const next = value.replace(/\D/g, "");
+    (matchId: string, field: "home" | "away" | "qualified", value: string) => {
+      const next = field === "qualified" ? value : value.replace(/\D/g, "");
       setScores((prev) => ({
         ...prev,
         [matchId]: {
-          ...(prev[matchId] ?? { home: "", away: "" }),
+          ...(prev[matchId] ?? { home: "", away: "", qualified: "" }),
           [field]: next,
         },
       }));
     },
     [],
   );
+
+  // Dynamically resolve knockout match participants based on admin inputs
+  const resolvedKnockouts = useMemo(() => {
+    return resolveKnockoutMatches(
+      [
+        ...KNOCKOUT_MATCHES,
+        ...OITAVAS_MATCHES,
+        ...QUARTAS_MATCHES,
+        ...SEMI_MATCHES,
+        ...FINAL_MATCHES,
+      ],
+      scores
+    );
+  }, [scores]);
+
+  const resolved16avos = useMemo(() => resolvedKnockouts.filter(m => m.id.startsWith("16-AVOS-")), [resolvedKnockouts]);
+  const resolvedOitavas = useMemo(() => resolvedKnockouts.filter(m => m.id.startsWith("OITAVAS-")), [resolvedKnockouts]);
+  const resolvedQuartas = useMemo(() => resolvedKnockouts.filter(m => m.id.startsWith("QUARTAS-")), [resolvedKnockouts]);
+  const resolvedSemi = useMemo(() => resolvedKnockouts.filter(m => m.id.startsWith("SEMI-")), [resolvedKnockouts]);
+  const resolvedFinal = useMemo(() => resolvedKnockouts.filter(m => m.id.startsWith("FINAL-")), [resolvedKnockouts]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -269,11 +290,11 @@ export default function AdminPanel() {
             <div className="form-card" style={{ maxWidth: "100%", margin: "0 0 2.5rem 0", padding: "1.5rem" }}>
               <h2 style={{ margin: "0 0 1.5rem 0" }}>Mata-Mata (16-avos de final)</h2>
               <ul className="match-list">
-                {KNOCKOUT_MATCHES.map((m) => (
+                {resolved16avos.map((m) => (
                   <li key={m.id}>
                     <MatchRow
                       match={m}
-                      score={scores[m.id] ?? { home: "", away: "" }}
+                      score={scores[m.id] ?? { home: "", away: "", qualified: "" }}
                       onChange={onScoreChange}
                       isAdmin={true}
                     />
@@ -283,11 +304,11 @@ export default function AdminPanel() {
 
               <h2 style={{ margin: "2.5rem 0 1.5rem 0" }}>Mata-Mata (Oitavas de final)</h2>
               <ul className="match-list">
-                {OITAVAS_MATCHES.map((m) => (
+                {resolvedOitavas.map((m) => (
                   <li key={m.id}>
                     <MatchRow
                       match={m}
-                      score={scores[m.id] ?? { home: "", away: "" }}
+                      score={scores[m.id] ?? { home: "", away: "", qualified: "" }}
                       onChange={onScoreChange}
                       isAdmin={true}
                     />
@@ -297,11 +318,11 @@ export default function AdminPanel() {
 
               <h2 style={{ margin: "2.5rem 0 1.5rem 0" }}>Mata-Mata (Quartas de final)</h2>
               <ul className="match-list">
-                {QUARTAS_MATCHES.map((m) => (
+                {resolvedQuartas.map((m) => (
                   <li key={m.id}>
                     <MatchRow
                       match={m}
-                      score={scores[m.id] ?? { home: "", away: "" }}
+                      score={scores[m.id] ?? { home: "", away: "", qualified: "" }}
                       onChange={onScoreChange}
                       isAdmin={true}
                     />
@@ -311,11 +332,11 @@ export default function AdminPanel() {
 
               <h2 style={{ margin: "2.5rem 0 1.5rem 0" }}>Mata-Mata (Semifinais)</h2>
               <ul className="match-list">
-                {SEMI_MATCHES.map((m) => (
+                {resolvedSemi.map((m) => (
                   <li key={m.id}>
                     <MatchRow
                       match={m}
-                      score={scores[m.id] ?? { home: "", away: "" }}
+                      score={scores[m.id] ?? { home: "", away: "", qualified: "" }}
                       onChange={onScoreChange}
                       isAdmin={true}
                     />
@@ -325,11 +346,11 @@ export default function AdminPanel() {
 
               <h2 style={{ margin: "2.5rem 0 1.5rem 0" }}>Mata-Mata (Final e 3º Lugar)</h2>
               <ul className="match-list">
-                {FINAL_MATCHES.map((m) => (
+                {resolvedFinal.map((m) => (
                   <li key={m.id}>
                     <MatchRow
                       match={m}
-                      score={scores[m.id] ?? { home: "", away: "" }}
+                      score={scores[m.id] ?? { home: "", away: "", qualified: "" }}
                       onChange={onScoreChange}
                       isAdmin={true}
                     />

@@ -9,7 +9,7 @@ type Props = {
   scores: Record<string, ScoreInput>;
   onScoreChange: (
     matchId: string,
-    field: "home" | "away",
+    field: "home" | "away" | "qualified",
     value: string,
   ) => void;
   disabled?: boolean;

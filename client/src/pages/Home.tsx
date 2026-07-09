@@ -67,12 +67,12 @@ export default function Home() {
   }, []);
 
   const onScoreChange = useCallback(
-    (matchId: string, field: "home" | "away", value: string) => {
-      const next = sanitizeScoreInput(value);
+    (matchId: string, field: "home" | "away" | "qualified", value: string) => {
+      const next = field === "qualified" ? value : sanitizeScoreInput(value);
       setScores((prev) => ({
         ...prev,
         [matchId]: {
-          ...(prev[matchId] ?? { home: "", away: "" }),
+          ...(prev[matchId] ?? { home: "", away: "", qualified: "" }),
           [field]: next,
         },
       }));

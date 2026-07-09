@@ -10,13 +10,14 @@ import {
   getExpiryDate,
   getLeagueMatches,
   isFirebaseConfigured,
+  getOfficialResults,
+  getStartDate,
   type League,
 } from "../lib/firebaseService";
 import { hashPassword } from "../lib/hash";
 import type { ScoreInput } from "../lib/standings";
 import { parseMatchDate } from "../lib/scoring";
-
-
+import { resolveKnockoutMatches } from "../data/knockoutStage";
 
 function sanitizeScoreInput(value: string): string {
   return value.replace(/\D/g, "");
@@ -29,6 +30,9 @@ export default function LeagueFill() {
   const [league, setLeague] = useState<League | null>(null);
   const [loadingLeague, setLoadingLeague] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [officialResults, setOfficialResults] = useState<any>(null);
+  const [startSemiDate, setStartSemiDate] = useState<Date | null>(null);
+  const [startFinalDate, setStartFinalDate] = useState<Date | null>(null);
 
   // Campos de Inscrição
   const [fullName, setFullName] = useState("");
@@ -38,7 +42,8 @@ export default function LeagueFill() {
 
   const [submitting, setSubmitting] = useState(false);
 
-  const [deadlinePassed, setDeadlinePassed] = useState(false);
+  const [joinDeadlinePassed, setJoinDeadlinePassed] = useState(false);
+  const [formattedQuartasDeadline, setFormattedQuartasDeadline] = useState("");
 
   useEffect(() => {
     if (!leagueId) return;
@@ -46,15 +51,37 @@ export default function LeagueFill() {
     const loadLeague = async () => {
       try {
         const l = await getLeague(leagueId);
-        const isPassed = await isSubmissionDeadlinePassed(l.isKnockout, l.phase);
+        const [isPassed, results, semiStart, finalStart] = await Promise.all([
+          isSubmissionDeadlinePassed(l.isKnockout, l.phase),
+          getOfficialResults(),
+          getStartDate("semi"),
+          getStartDate("final"),
+        ]);
         setLeague(l);
-        setDeadlinePassed(isPassed);
+        setOfficialResults(results);
+        setStartSemiDate(semiStart);
+        setStartFinalDate(finalStart);
+
+        let joinPassed = isPassed;
+        if (l.phase === "fase-final") {
+          const quartasLimit = await getExpiryDate(l.isKnockout, "quartas");
+          joinPassed = new Date().getTime() > quartasLimit.getTime();
+          setFormattedQuartasDeadline(quartasLimit.toLocaleString("pt-BR", {
+            timeZone: "America/Sao_Paulo",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }));
+        }
+        setJoinDeadlinePassed(joinPassed);
 
         // Inicializa placares vazios baseados na fase da liga
         const matches = getLeagueMatches(l.phase);
         const initialScores: Record<string, ScoreInput> = {};
         for (const m of matches) {
-          initialScores[m.id] = { home: "", away: "" };
+          initialScores[m.id] = { home: "", away: "", qualified: "" };
         }
         setScores(initialScores);
       } catch (err: any) {
@@ -74,12 +101,12 @@ export default function LeagueFill() {
   }, [league]);
 
   const onScoreChange = useCallback(
-    (matchId: string, field: "home" | "away", value: string) => {
-      const next = sanitizeScoreInput(value);
+    (matchId: string, field: "home" | "away" | "qualified", value: string) => {
+      const next = field === "qualified" ? value : sanitizeScoreInput(value);
       setScores((prev) => ({
         ...prev,
         [matchId]: {
-          ...(prev[matchId] ?? { home: "", away: "" }),
+          ...(prev[matchId] ?? { home: "", away: "", qualified: "" }),
           [field]: next,
         },
       }));
@@ -87,39 +114,68 @@ export default function LeagueFill() {
     [],
   );
 
+  const activeSubPhase = useMemo(() => {
+    if (league?.phase !== "fase-final" || !officialResults) return null;
+    const officialScores = officialResults.scores || {};
+    const qfIds = ["QUARTAS-1", "QUARTAS-2", "QUARTAS-3", "QUARTAS-4"];
+    const sfIds = ["SEMI-1", "SEMI-2"];
+    
+    const allQfFinished = qfIds.every(id => {
+      const s = officialScores[id];
+      return s && s.home.trim() !== "" && s.away.trim() !== "";
+    });
+    if (!allQfFinished) return "quartas";
+
+    const allSfFinished = sfIds.every(id => {
+      const s = officialScores[id];
+      return s && s.home.trim() !== "" && s.away.trim() !== "";
+    });
+    if (!allSfFinished) return "semi";
+
+    return "final";
+  }, [league, officialResults]);
+
   const leagueMatches = useMemo(() => {
-    const list = getLeagueMatches(league?.phase) || [];
+    let list = getLeagueMatches(league?.phase) || [];
+    if (league?.phase === "fase-final" && officialResults) {
+      list = resolveKnockoutMatches(list, officialResults.scores || {});
+    }
     return [...list].sort((a, b) => {
       const ta = a.scheduled ? parseMatchDate(a.scheduled) : 0;
       const tb = b.scheduled ? parseMatchDate(b.scheduled) : 0;
       return ta - tb;
     });
-  }, [league]);
+  }, [league, officialResults]);
 
   const filledCount = useMemo(() => {
     let n = 0;
     for (const m of leagueMatches) {
+      if (league?.phase === "fase-final" && activeSubPhase) {
+        const matchSubPhase = m.id.startsWith("QUARTAS-") ? "quartas" : m.id.startsWith("SEMI-") ? "semi" : "final";
+        if (matchSubPhase !== activeSubPhase) continue;
+      }
       const s = scores[m.id];
       if (s?.home.trim() !== "" && s?.away.trim() !== "") n += 1;
     }
     return n;
-  }, [scores, leagueMatches]);
+  }, [scores, leagueMatches, league, activeSubPhase]);
+
+  const activeMatchesCount = useMemo(() => {
+    if (league?.phase === "fase-final" && activeSubPhase) {
+      return leagueMatches.filter(m => {
+        const matchSubPhase = m.id.startsWith("QUARTAS-") ? "quartas" : m.id.startsWith("SEMI-") ? "semi" : "final";
+        return matchSubPhase === activeSubPhase;
+      }).length;
+    }
+    return leagueMatches.length;
+  }, [leagueMatches, league, activeSubPhase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (deadlinePassed) {
-      const deadline = await getExpiryDate(league?.isKnockout, league?.phase);
-      const formatted = deadline.toLocaleString("pt-BR", {
-        timeZone: "America/Sao_Paulo",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      setError(`O prazo de inscrições para esta liga expirou (${formatted} BRT).`);
+    if (joinDeadlinePassed) {
+      setError(`O prazo para novas inscrições nesta liga encerrou (${formattedQuartasDeadline} BRT). Apenas participantes existentes podem continuar editando seus palpites.`);
       return;
     }
 
@@ -129,10 +185,11 @@ export default function LeagueFill() {
       return;
     }
 
-    if (filledCount < leagueMatches.length) {
+    if (filledCount < activeMatchesCount) {
+      const label = league?.phase === "fase-final" ? `da fase ativa (${activeSubPhase?.toUpperCase()})` : "";
       if (
         !window.confirm(
-          `Você preencheu ${filledCount} de ${leagueMatches.length} palpites. Deseja salvar mesmo assim? Poderá editar os palpites restantes depois (antes do prazo).`,
+          `Você preencheu ${filledCount} de ${activeMatchesCount} palpites ${label}. Deseja salvar mesmo assim? Poderá editar os palpites restantes depois (antes do prazo).`,
         )
       ) {
         return;
@@ -233,12 +290,15 @@ export default function LeagueFill() {
           </div>
         )}
 
-        {deadlinePassed ? (
+        {joinDeadlinePassed ? (
           <div className="alert-box alert-box--error" style={{ marginBottom: "2rem" }}>
             <strong>🔒 Inscrições Encerradas:</strong>
             <p>
-              O prazo para envio de novos palpites foi encerrado em{" "}
-              {league?.isKnockout ? "28 de Junho às 16:00 BRT" : "11 de Junho às 14:00 BRT"}.
+              O prazo para novas inscrições nesta liga encerrou em{" "}
+              {league?.phase === "fase-final" ? `${formattedQuartasDeadline} BRT` : (league?.isKnockout ? "28 de Junho às 16:00 BRT" : "11 de Junho às 14:00 BRT")}.
+            </p>
+            <p style={{ marginTop: "0.5rem", fontSize: "0.9rem" }}>
+              Novos participantes não podem mais se cadastrar. Se você já tem palpites cadastrados nesta liga, utilize seu link individual para editá-los.
             </p>
             <Link to={`/league/${leagueId}`} className="btn btn-primary" style={{ marginTop: "1rem", alignSelf: "flex-start", textDecoration: "none" }}>
               Ver Classificação da Liga
@@ -302,17 +362,48 @@ export default function LeagueFill() {
             {/* Grid de Palpites */}
             {league?.isKnockout ? (
               <div className="form-card" style={{ maxWidth: "100%", margin: "0 0 2.5rem 0", padding: "1.5rem" }}>
-                <h3 style={{ margin: "0 0 1.5rem 0" }}>Jogos de Mata-Mata</h3>
+                <h3 style={{ margin: "0 0 0.5rem 0" }}>Jogos de Mata-Mata</h3>
+                {league.phase === "fase-final" && activeSubPhase && (
+                  <div className="alert-box alert-box--info" style={{ marginBottom: "1.5rem", padding: "0.75rem 1rem", fontSize: "0.9rem" }}>
+                    <strong>Fase Ativa de Palpites: {activeSubPhase.toUpperCase()}</strong>
+                    <p style={{ margin: "0.25rem 0 0" }}>Os palpites estão abertos apenas para as {activeSubPhase === "quartas" ? "Quartas de Final" : activeSubPhase === "semi" ? "Semifinais" : "Finais"}. As demais fases estão travadas temporariamente.</p>
+                  </div>
+                )}
                 <ul className="match-list">
-                  {leagueMatches.map((m) => (
-                    <li key={m.id}>
-                      <MatchRow
-                        match={m}
-                        score={scores[m.id] ?? { home: "", away: "" }}
-                        onChange={onScoreChange}
-                      />
-                    </li>
-                  ))}
+                  {leagueMatches.map((m) => {
+                    const matchSubPhase = m.id.startsWith("QUARTAS-") ? "quartas" : m.id.startsWith("SEMI-") ? "semi" : "final";
+                    const now = new Date();
+                    
+                    let isInactive = false;
+                    let lockReason = "";
+                    
+                    if (league?.phase === "fase-final") {
+                      if (activeSubPhase && matchSubPhase !== activeSubPhase) {
+                        isInactive = true;
+                        lockReason = `Aguardando resultados oficiais da fase de ${matchSubPhase === "semi" ? "Quartas" : "Semifinais"}`;
+                      }
+                      
+                      if (matchSubPhase === "semi" && startSemiDate && now < startSemiDate) {
+                        isInactive = true;
+                        lockReason = `Palpites das Semifinais abrem apenas em ${startSemiDate.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} BRT`;
+                      } else if (matchSubPhase === "final" && startFinalDate && now < startFinalDate) {
+                        isInactive = true;
+                        lockReason = `Palpites da Final abrem apenas em ${startFinalDate.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} BRT (Bloqueado para preenchimento antecipado)`;
+                      }
+                    }
+                    
+                    return (
+                      <li key={m.id}>
+                        <MatchRow
+                          match={m}
+                          score={scores[m.id] ?? { home: "", away: "", qualified: "" }}
+                          onChange={onScoreChange}
+                          disabled={isInactive}
+                          lockReason={lockReason}
+                        />
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ) : (

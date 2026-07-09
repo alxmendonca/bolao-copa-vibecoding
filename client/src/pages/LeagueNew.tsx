@@ -9,7 +9,7 @@ export default function LeagueNew() {
   const [exact, setExact] = useState(25);
   const [result, setResult] = useState(10);
   const [creatorCode, setCreatorCode] = useState("");
-  const [phase, setPhase] = useState("16-avos");
+  const [phase, setPhase] = useState("fase-final");
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
@@ -189,12 +189,10 @@ export default function LeagueNew() {
                 <option value="grupos" disabled>Fase de Grupos (Já passou)</option>
                 <option value="16-avos">16-avos de Final (Disponível)</option>
                 <option value="oitavas">Oitavas de Final (Disponível)</option>
-                <option value="quartas" disabled>Quartas de Final (Ainda sem times definidos)</option>
-                <option value="semi" disabled>Semifinais (Ainda sem times definidos)</option>
-                <option value="final" disabled>Final (Ainda sem times definidos)</option>
+                <option value="fase-final">Fase Final: Quartas, Semis e Final (Disponível)</option>
               </select>
               <p className="form-helper" style={{ marginTop: "0.25rem", fontSize: "0.8rem", color: "var(--muted)" }}>
-                Cada liga serve apenas para uma única fase. No momento, os 16-avos e as Oitavas de Final estão disponíveis.
+                Escolha a fase da liga. A "Fase Final" permite palpites sequenciais (Quartas de final primeiro, depois Semifinais e então a Final).
               </p>
             </div>
 

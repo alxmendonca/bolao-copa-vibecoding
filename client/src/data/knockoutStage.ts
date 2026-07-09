@@ -1,4 +1,5 @@
 import type { Team, MatchDef } from "./groupStage";
+import type { ScoreInput } from "../lib/standings";
 
 const KNOCKOUT_TEAMS: Record<string, Team> = {
   can: { id: "can", name: "Canadá" },
@@ -83,10 +84,10 @@ export const OITAVAS_MATCHES: MatchDef[] = [
 ];
 
 export const QUARTAS_MATCHES: MatchDef[] = [
-  { id: "QUARTAS-1", group: "Quartas", home: { id: "TBD", name: "Vencedor OITAVAS-1" }, away: { id: "TBD", name: "Vencedor OITAVAS-2" }, scheduled: "09 de jul às 16:00" },
-  { id: "QUARTAS-2", group: "Quartas", home: { id: "TBD", name: "Vencedor OITAVAS-3" }, away: { id: "TBD", name: "Vencedor OITAVAS-4" }, scheduled: "09 de jul às 20:00" },
-  { id: "QUARTAS-3", group: "Quartas", home: { id: "TBD", name: "Vencedor OITAVAS-5" }, away: { id: "TBD", name: "Vencedor OITAVAS-6" }, scheduled: "10 de jul às 16:00" },
-  { id: "QUARTAS-4", group: "Quartas", home: { id: "TBD", name: "Vencedor OITAVAS-7" }, away: { id: "TBD", name: "Vencedor OITAVAS-8" }, scheduled: "10 de jul às 20:00" },
+  { id: "QUARTAS-1", group: "Quartas", home: KNOCKOUT_TEAMS.fra, away: KNOCKOUT_TEAMS.mar, scheduled: "09 de jul às 17:00" },
+  { id: "QUARTAS-2", group: "Quartas", home: KNOCKOUT_TEAMS.esp, away: KNOCKOUT_TEAMS.bel, scheduled: "10 de jul às 16:00" },
+  { id: "QUARTAS-3", group: "Quartas", home: KNOCKOUT_TEAMS.nor, away: KNOCKOUT_TEAMS.eng, scheduled: "11 de jul às 18:00" },
+  { id: "QUARTAS-4", group: "Quartas", home: KNOCKOUT_TEAMS.arg, away: KNOCKOUT_TEAMS.sui, scheduled: "11 de jul às 22:00" },
 ];
 
 export const SEMI_MATCHES: MatchDef[] = [
@@ -106,3 +107,97 @@ export const ALL_KNOCKOUT_MATCHES: MatchDef[] = [
   ...SEMI_MATCHES,
   ...FINAL_MATCHES,
 ];
+
+// Helper to resolve knockout matches based on official results
+export function resolveKnockoutMatches(matches: MatchDef[], officialScores: Record<string, ScoreInput>): MatchDef[] {
+  // Clone matches to avoid mutations
+  const resolved = matches.map(m => ({
+    ...m,
+    home: { ...m.home },
+    away: { ...m.away }
+  }));
+
+  const getWinner = (matchId: string): Team | null => {
+    const match = resolved.find(m => m.id === matchId);
+    if (!match) return null;
+    
+    // Check if there is an official score
+    const score = officialScores[matchId];
+    if (!score || score.home.trim() === "" || score.away.trim() === "") return null;
+    
+    const h = parseInt(score.home, 10);
+    const a = parseInt(score.away, 10);
+    
+    if (h > a) return match.home;
+    if (a > h) return match.away;
+    
+    // If it's a draw, check qualified field (shootout winner)
+    if (score.qualified) {
+      if (score.qualified === match.home.id) return match.home;
+      if (score.qualified === match.away.id) return match.away;
+    }
+    
+    return null;
+  };
+
+  const getPerdedor = (matchId: string): Team | null => {
+    const match = resolved.find(m => m.id === matchId);
+    if (!match) return null;
+    
+    const score = officialScores[matchId];
+    if (!score || score.home.trim() === "" || score.away.trim() === "") return null;
+    
+    const h = parseInt(score.home, 10);
+    const a = parseInt(score.away, 10);
+    
+    if (h > a) return match.away;
+    if (a > h) return match.home;
+    
+    // If it's a draw, check qualified field
+    if (score.qualified) {
+      if (score.qualified === match.home.id) return match.away;
+      if (score.qualified === match.away.id) return match.home;
+    }
+    
+    return null;
+  };
+
+  // Resolve SEMI-1 (Vencedor QUARTAS-1 x Vencedor QUARTAS-2)
+  const semi1 = resolved.find(m => m.id === "SEMI-1");
+  if (semi1) {
+    const w1 = getWinner("QUARTAS-1");
+    const w2 = getWinner("QUARTAS-2");
+    if (w1) semi1.home = w1;
+    if (w2) semi1.away = w2;
+  }
+
+  // Resolve SEMI-2 (Vencedor QUARTAS-3 x Vencedor QUARTAS-4)
+  const semi2 = resolved.find(m => m.id === "SEMI-2");
+  if (semi2) {
+    const w3 = getWinner("QUARTAS-3");
+    const w4 = getWinner("QUARTAS-4");
+    if (w3) semi2.home = w3;
+    if (w4) semi2.away = w4;
+  }
+
+  // Resolve FINAL-1 (Vencedor SEMI-1 x Vencedor SEMI-2)
+  const final1 = resolved.find(m => m.id === "FINAL-1");
+  if (final1) {
+    const ws1 = getWinner("SEMI-1");
+    const ws2 = getWinner("SEMI-2");
+    if (ws1) final1.home = ws1;
+    if (ws2) final1.away = ws2;
+  }
+
+  // Resolve FINAL-2 (Perdedor SEMI-1 x Perdedor SEMI-2)
+  const final2 = resolved.find(m => m.id === "FINAL-2");
+  if (final2) {
+    const ls1 = getPerdedor("SEMI-1");
+    const ls2 = getPerdedor("SEMI-2");
+    if (ls1) final2.home = ls1;
+    if (ls2) final2.away = ls2;
+  }
+
+  return resolved;
+}
+

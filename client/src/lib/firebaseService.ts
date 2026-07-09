@@ -31,7 +31,7 @@ export interface League {
   rules: LeagueRules;
   createdAt: string;
   isKnockout?: boolean;
-  phase?: "grupos" | "16-avos" | "oitavas" | "quartas" | "semi" | "final";
+  phase?: "grupos" | "16-avos" | "oitavas" | "quartas" | "semi" | "final" | "fase-final";
   logo?: string; // base64 encoded image data url
 }
 
@@ -47,6 +47,8 @@ export function getLeagueMatches(phase: string | undefined): typeof ALL_MATCHES 
       return SEMI_MATCHES;
     case "final":
       return FINAL_MATCHES;
+    case "fase-final":
+      return [...QUARTAS_MATCHES, ...SEMI_MATCHES, ...FINAL_MATCHES];
     case "grupos":
     default:
       return ALL_MATCHES;
@@ -85,6 +87,45 @@ export async function getExpiryDate(isKnockout?: boolean, phase?: string): Promi
       let path = "settings/expiryDate";
       if (phase === "oitavas") {
         path = "settings/expiryDateOitavas";
+      } else if (phase === "quartas") {
+        path = "settings/expiryDateQuartas";
+      } else if (phase === "semi") {
+        path = "settings/expiryDateSemi";
+      } else if (phase === "final") {
+        path = "settings/expiryDateFinal";
+      } else if (phase === "fase-final") {
+        // Dynamic detection of sub-phase for 'fase-final'
+        let officialScores: Record<string, ScoreInput> = {};
+        try {
+          const resultsSnap = await get(ref(db, "admin/results"));
+          if (resultsSnap.exists()) {
+            officialScores = resultsSnap.val().scores || {};
+          }
+        } catch (e) {
+          console.error("Erro ao obter resultados oficiais para prazo:", e);
+        }
+        
+        const qfIds = ["QUARTAS-1", "QUARTAS-2", "QUARTAS-3", "QUARTAS-4"];
+        const sfIds = ["SEMI-1", "SEMI-2"];
+        
+        const allQfFinished = qfIds.every(id => {
+          const s = officialScores[id];
+          return s && s.home.trim() !== "" && s.away.trim() !== "";
+        });
+        
+        if (!allQfFinished) {
+          path = "settings/expiryDateQuartas";
+        } else {
+          const allSfFinished = sfIds.every(id => {
+            const s = officialScores[id];
+            return s && s.home.trim() !== "" && s.away.trim() !== "";
+          });
+          if (!allSfFinished) {
+            path = "settings/expiryDateSemi";
+          } else {
+            path = "settings/expiryDateFinal";
+          }
+        }
       } else if (isKnockout) {
         path = "settings/expiryDateKnockout";
       }
@@ -102,15 +143,98 @@ export async function getExpiryDate(isKnockout?: boolean, phase?: string): Promi
     let key = "bolao_mock_expiry_date";
     if (phase === "oitavas") {
       key = "bolao_mock_expiry_date_oitavas";
+    } else if (phase === "quartas") {
+      key = "bolao_mock_expiry_date_quartas";
+    } else if (phase === "semi") {
+      key = "bolao_mock_expiry_date_semi";
+    } else if (phase === "final") {
+      key = "bolao_mock_expiry_date_final";
+    } else if (phase === "fase-final") {
+      // Dynamic detection of sub-phase for mock 'fase-final'
+      let officialScores: Record<string, ScoreInput> = {};
+      try {
+        const stored = localStorage.getItem("bolao_mock_official_results");
+        if (stored) {
+          officialScores = JSON.parse(stored).scores || {};
+        }
+      } catch (e) {}
+      
+      const qfIds = ["QUARTAS-1", "QUARTAS-2", "QUARTAS-3", "QUARTAS-4"];
+      const sfIds = ["SEMI-1", "SEMI-2"];
+      
+      const allQfFinished = qfIds.every(id => {
+        const s = officialScores[id];
+        return s && s.home.trim() !== "" && s.away.trim() !== "";
+      });
+      
+      if (!allQfFinished) {
+        key = "bolao_mock_expiry_date_quartas";
+      } else {
+        const allSfFinished = sfIds.every(id => {
+          const s = officialScores[id];
+          return s && s.home.trim() !== "" && s.away.trim() !== "";
+        });
+        if (!allSfFinished) {
+          key = "bolao_mock_expiry_date_semi";
+        } else {
+          key = "bolao_mock_expiry_date_final";
+        }
+      }
     } else if (isKnockout) {
       key = "bolao_mock_expiry_date_knockout";
     }
     const mockVal = localStorage.getItem(key);
     if (mockVal) return new Date(mockVal);
   }
-  // Default fallback: hoje às 16:00 BRT (19:00 UTC)
+  // Default fallbacks
   if (phase === "oitavas") {
     return new Date("2026-07-04T14:00:00-03:00");
+  }
+  if (phase === "quartas") {
+    return new Date("2026-07-09T17:00:00-03:00");
+  }
+  if (phase === "semi") {
+    return new Date("2026-07-14T20:00:00-03:00");
+  }
+  if (phase === "final") {
+    return new Date("2026-07-18T16:00:00-03:00");
+  }
+  if (phase === "fase-final") {
+    let officialScores: Record<string, ScoreInput> = {};
+    if (isFirebaseConfigured && db) {
+      try {
+        // Dynamic fetch of results for fallback calculation
+        const resultsSnap = await get(ref(db, "admin/results"));
+        if (resultsSnap.exists()) {
+          officialScores = resultsSnap.val().scores || {};
+        }
+      } catch (e) {}
+    } else {
+      try {
+        const stored = localStorage.getItem("bolao_mock_official_results");
+        if (stored) officialScores = JSON.parse(stored).scores || {};
+      } catch (e) {}
+    }
+    
+    const qfIds = ["QUARTAS-1", "QUARTAS-2", "QUARTAS-3", "QUARTAS-4"];
+    const sfIds = ["SEMI-1", "SEMI-2"];
+    
+    const allQfFinished = qfIds.every(id => {
+      const s = officialScores[id];
+      return s && s.home.trim() !== "" && s.away.trim() !== "";
+    });
+    
+    if (!allQfFinished) {
+      return new Date("2026-07-09T17:00:00-03:00"); // Quartas deadline (9 Jul às 17h BRT)
+    }
+    const allSfFinished = sfIds.every(id => {
+      const s = officialScores[id];
+      return s && s.home.trim() !== "" && s.away.trim() !== "";
+    });
+    if (!allSfFinished) {
+      return new Date("2026-07-14T20:00:00-03:00"); // Semi deadline (14 Jul às 20h BRT)
+    }
+    return new Date("2026-07-18T16:00:00-03:00"); // Final deadline (18 Jul às 16h BRT)
   }
   if (isKnockout) {
     return new Date("2026-06-28T16:00:00-03:00");
@@ -123,6 +247,33 @@ export async function isSubmissionDeadlinePassed(isKnockout?: boolean, phase?: s
   const deadline = await getExpiryDate(isKnockout, phase);
   const now = new Date();
   return now.getTime() > deadline.getTime();
+}
+
+// Retorna as datas de início de palpites para Semis e Finais
+export async function getStartDate(phase: "semi" | "final"): Promise<Date> {
+  if (isFirebaseConfigured && db) {
+    try {
+      const path = phase === "semi" ? "settings/startSemi" : "settings/startFinal";
+      const snap = await get(ref(db, path));
+      if (snap.exists()) {
+        const val = snap.val();
+        if (val) {
+          return new Date(val);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao obter data de início do Firebase:", e);
+    }
+  } else {
+    const key = phase === "semi" ? "bolao_mock_start_semi" : "bolao_mock_start_final";
+    const mockVal = localStorage.getItem(key);
+    if (mockVal) return new Date(mockVal);
+  }
+  // Default fallbacks
+  if (phase === "semi") {
+    return new Date("2026-07-12T00:00:00-03:00"); // 12 de Julho à meia-noite BRT (após as quartas)
+  }
+  return new Date("2026-07-16T00:00:00-03:00"); // 16 de Julho à meia-noite BRT (após as semis)
 }
 
 
@@ -188,14 +339,14 @@ export async function createLeague(
     throw new Error("Código de Criador inválido! (Não autorizado)");
   }
 
-  if (phase !== "16-avos" && phase !== "oitavas") {
-    throw new Error("Somente as fases de 16-avos e oitavas de final estão disponíveis para criação de ligas no momento.");
+  if (phase !== "16-avos" && phase !== "oitavas" && phase !== "fase-final") {
+    throw new Error("Somente as fases de 16-avos, oitavas de final e fase final estão disponíveis para criação de ligas no momento.");
   }
 
   const leagueId = generateUniqueHash();
   const createdDate = new Date();
   const cutoffDate = new Date("2026-06-28T00:00:00-03:00");
-  const isKnockout = createdDate.getTime() >= cutoffDate.getTime();
+  const isKnockout = phase === "fase-final" || phase === "16-avos" || phase === "oitavas" || createdDate.getTime() >= cutoffDate.getTime();
 
   const newLeague: League = {
     id: leagueId,
@@ -274,8 +425,18 @@ export async function joinLeague(
 ): Promise<string> {
   const league = await getLeague(leagueId);
 
-  if (await isSubmissionDeadlinePassed(league.isKnockout, league.phase)) {
-    const deadline = await getExpiryDate(league.isKnockout, league.phase);
+  let isJoinBlocked = await isSubmissionDeadlinePassed(league.isKnockout, league.phase);
+  let deadline = await getExpiryDate(league.isKnockout, league.phase);
+
+  if (league.phase === "fase-final") {
+    const quartasLimit = await getExpiryDate(league.isKnockout, "quartas");
+    if (new Date().getTime() > quartasLimit.getTime()) {
+      isJoinBlocked = true;
+      deadline = quartasLimit;
+    }
+  }
+
+  if (isJoinBlocked) {
     const formatted = deadline.toLocaleString("pt-BR", {
       timeZone: "America/Sao_Paulo",
       day: "2-digit",
@@ -284,7 +445,7 @@ export async function joinLeague(
       hour: "2-digit",
       minute: "2-digit",
     });
-    throw new Error(`Prazo de envio de palpites encerrado (${formatted} BRT).`);
+    throw new Error(`Inscrições encerradas para este bolão (${formatted} BRT).`);
   }
 
   // Validar se o apelido já existe na liga

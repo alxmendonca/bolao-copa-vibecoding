@@ -1,6 +1,6 @@
 import type { MatchDef, Team } from "../data/groupStage";
 
-export type ScoreInput = { home: string; away: string };
+export type ScoreInput = { home: string; away: string; qualified?: string };
 
 export type StandingRow = {
   position: number;
