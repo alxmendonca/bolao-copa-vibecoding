@@ -13,6 +13,7 @@ type Props = {
   rules?: { exact: number; result: number };
   isAdmin?: boolean;
   lockReason?: string;
+  hidePredictions?: boolean;
 };
 
 function focusNextInput(current: HTMLInputElement): void {
@@ -25,11 +26,14 @@ function focusNextInput(current: HTMLInputElement): void {
   }
 }
 
-export function MatchRow({ match, score, onChange, disabled, officialScore, rules, isAdmin, lockReason }: Props) {
+export function MatchRow({ match, score, onChange, disabled, officialScore, rules, isAdmin, lockReason, hidePredictions }: Props) {
   const awayRef = useRef<HTMLInputElement>(null);
 
-  const homeOk = validateScoreField(score.home);
-  const awayOk = validateScoreField(score.away);
+  const homeDisplayVal = hidePredictions ? (score.home.trim() !== "" ? "🔒" : "") : score.home;
+  const awayDisplayVal = hidePredictions ? (score.away.trim() !== "" ? "🔒" : "") : score.away;
+
+  const homeOk = validateScoreField(homeDisplayVal);
+  const awayOk = validateScoreField(awayDisplayVal);
 
   const handleHomeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(match.id, "home", e.target.value);
@@ -149,10 +153,10 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
             pattern="[0-9]*"
             className={`score-input${homeOk ? "" : " score-input--invalid"}`}
             aria-label={`Gols ${match.home.name}`}
-            value={score.home}
+            value={homeDisplayVal}
             onChange={handleHomeChange}
             placeholder="—"
-            disabled={disabled || shouldLock}
+            disabled={disabled || shouldLock || hidePredictions}
           />
           <span className="score-x">×</span>
           <input
@@ -162,10 +166,10 @@ export function MatchRow({ match, score, onChange, disabled, officialScore, rule
             pattern="[0-9]*"
             className={`score-input${awayOk ? "" : " score-input--invalid"}`}
             aria-label={`Gols ${match.away.name}`}
-            value={score.away}
+            value={awayDisplayVal}
             onChange={handleAwayChange}
             placeholder="—"
-            disabled={disabled || shouldLock}
+            disabled={disabled || shouldLock || hidePredictions}
           />
         </div>
         <span className="team-name away">{match.away.name}</span>

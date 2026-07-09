@@ -62,6 +62,9 @@ export default function LeagueDetail() {
   const [deadlinePassed, setDeadlinePassed] = useState(false);
   const [joinDeadlinePassed, setJoinDeadlinePassed] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState<Date | null>(null);
+  const [expiryQuartas, setExpiryQuartas] = useState<Date | null>(null);
+  const [expirySemi, setExpirySemi] = useState<Date | null>(null);
+  const [expiryFinal, setExpiryFinal] = useState<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(() => new Date().getTime());
   const [matchViewMode, setMatchViewMode] = useState<"next3" | "today">("next3");
 
@@ -99,17 +102,23 @@ export default function LeagueDetail() {
     if (!leagueId) return;
     try {
       const leagueData = await getLeague(leagueId);
-      const [participantsList, results, isPassed, limitDate] = await Promise.all([
+      const [participantsList, results, isPassed, limitDate, qfLimit, sfLimit, fnLimit] = await Promise.all([
         getParticipants(leagueId),
         getOfficialResults(),
         isSubmissionDeadlinePassed(leagueData.isKnockout, leagueData.phase),
         getExpiryDate(leagueData.isKnockout, leagueData.phase),
+        getExpiryDate(leagueData.isKnockout, "quartas"),
+        getExpiryDate(leagueData.isKnockout, "semi"),
+        getExpiryDate(leagueData.isKnockout, "final"),
       ]);
       setLeague(leagueData);
       setParticipants(participantsList);
       setOfficialResults(results);
       setDeadlinePassed(isPassed);
       setDeadlineDate(limitDate);
+      setExpiryQuartas(qfLimit);
+      setExpirySemi(sfLimit);
+      setExpiryFinal(fnLimit);
       
       let joinPassed = isPassed;
       if (leagueData.phase === "fase-final") {
@@ -173,11 +182,25 @@ export default function LeagueDetail() {
       return;
     }
     try {
-      downloadLeagueExcel(league, participants);
+      downloadLeagueExcel(league, participants, {
+        quartas: expiryQuartas || new Date(),
+        semi: expirySemi || new Date(),
+        final: expiryFinal || new Date(),
+      });
     } catch (err) {
       alert("Erro ao exportar planilha da liga.");
     }
   };
+
+  const shouldHideMatchPrediction = useCallback((matchId: string) => {
+    if (league?.phase !== "fase-final") return false;
+    const matchSubPhase = matchId.startsWith("QUARTAS-") ? "quartas" : matchId.startsWith("SEMI-") ? "semi" : "final";
+    const now = new Date().getTime();
+    if (matchSubPhase === "quartas" && expiryQuartas && now < expiryQuartas.getTime()) return true;
+    if (matchSubPhase === "semi" && expirySemi && now < expirySemi.getTime()) return true;
+    if (matchSubPhase === "final" && expiryFinal && now < expiryFinal.getTime()) return true;
+    return false;
+  }, [league, expiryQuartas, expirySemi, expiryFinal]);
 
   // Obter a lista de partidas correspondente à fase da liga
   const leagueMatches = useMemo(() => {
@@ -914,8 +937,8 @@ export default function LeagueDetail() {
                         <tbody>
                           {participants.map((p) => {
                             const pred = p.scores[activeMatch.id];
-                            const displayScore = isOitavasPreStart
-                              ? <span title={`Os palpites estão ocultos até o encerramento do prazo (${formattedDeadline} BRT)`} data-tooltip={`Os palpites estão ocultos até o encerramento do prazo (${formattedDeadline} BRT)`} style={{ cursor: "help" }}>🔒</span>
+                            const displayScore = (isOitavasPreStart || shouldHideMatchPrediction(activeMatch.id))
+                              ? <span title="Os palpites estão ocultos até o início dos jogos desta fase/sub-fase" style={{ cursor: "help" }}>🔒</span>
                               : (pred && pred.home !== "" && pred.away !== "" ? `${pred.home} x ${pred.away}` : "-");
                             return (
                               <tr key={p.id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.02)" }}>

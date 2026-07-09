@@ -167,24 +167,12 @@ const cellScoreData = {
   }
 };
 
-function getGroupHeaderStyle(group: string) {
-  const color = GROUP_COLORS[group.toUpperCase()] || "EAEAEA";
-  return {
-    fill: { fgColor: { rgb: color } },
-    font: { bold: true, name: "Segoe UI", sz: 10 },
-    alignment: { wrapText: true, horizontal: "center", vertical: "center" },
-    border: {
-      top: { style: "medium", color: { rgb: "000000" } },
-      bottom: { style: "medium", color: { rgb: "000000" } },
-      left: { style: "thin", color: { rgb: "A6A6A6" } },
-      right: { style: "thin", color: { rgb: "A6A6A6" } }
-    }
-  };
-}
+
 
 export function downloadLeagueExcel(
   league: League,
   participants: Participant[],
+  expiryDates?: { quartas: Date; semi: Date; final: Date }
 ): void {
   // Obter as partidas corretas da fase da liga ordenadas cronologicamente
   const rawMatches = getLeagueMatches(league.phase);
@@ -205,7 +193,7 @@ export function downloadLeagueExcel(
     }
   }
 
-  // 2. Criar a linha de cabeçalho dos Grupos (Ex: "Grupo A" mesclado nas colunas dos jogos daquele grupo)
+  // 2. Criar a linha de cabeçalho dos Grupos
   const groupHeaderRow: any[] = [
     { v: "Nome do Participante", t: "s", s: cellNormalHeader },
     { v: "Apelido", t: "s", s: cellNormalHeader },
@@ -218,17 +206,16 @@ export function downloadLeagueExcel(
       t: "s",
       s: {
         fill: { fgColor: { rgb: color } },
-        font: { bold: true, name: "Segoe UI", sz: 11 },
+        font: { name: "Segoe UI", bold: true, color: { rgb: "333333" } },
         alignment: { horizontal: "center", vertical: "center" },
         border: {
-          top: { style: "medium", color: { rgb: "000000" } },
-          bottom: { style: "medium", color: { rgb: "000000" } },
+          top: { style: "thin", color: { rgb: "A6A6A6" } },
+          bottom: { style: "thin", color: { rgb: "A6A6A6" } },
           left: { style: "thin", color: { rgb: "A6A6A6" } },
           right: { style: "thin", color: { rgb: "A6A6A6" } }
         }
       }
     });
-    // Células vazias para preencher as colunas que serão mescladas (com estilos clonados e bordas explícitas)
     for (let i = 1; i < g.span; i++) {
       groupHeaderRow.push({
         v: "",
@@ -236,8 +223,8 @@ export function downloadLeagueExcel(
         s: {
           fill: { fgColor: { rgb: color } },
           border: {
-            top: { style: "medium", color: { rgb: "000000" } },
-            bottom: { style: "medium", color: { rgb: "000000" } },
+            top: { style: "thin", color: { rgb: "A6A6A6" } },
+            bottom: { style: "thin", color: { rgb: "A6A6A6" } },
             left: { style: "thin", color: { rgb: "A6A6A6" } },
             right: { style: "thin", color: { rgb: "A6A6A6" } }
           }
@@ -246,46 +233,46 @@ export function downloadLeagueExcel(
     }
   }
 
-  // 3. Criar a linha de bandeiras das Partidas (isolando os emojis)
+  // 3. Criar a linha de bandeiras das Partidas
   const flagHeaderRow: any[] = [
     { v: "", t: "s", s: cellNormalHeader },
     { v: "", t: "s", s: cellNormalHeader },
-    ...matches.map((m) => {
-      const flagA = FLAG_EMOJIS[m.home.id] || "🏳️";
-      const flagB = FLAG_EMOJIS[m.away.id] || "🏳️";
-      return {
-        v: `${flagA} x ${flagB}`,
-        t: "s",
-        s: getGroupHeaderStyle(m.group),
-      };
-    })
   ];
+  for (const m of matches) {
+    const homeFlag = FLAG_EMOJIS[m.home.id] || "";
+    const awayFlag = FLAG_EMOJIS[m.away.id] || "";
+    flagHeaderRow.push({
+      v: `${homeFlag} vs ${awayFlag}`,
+      t: "s",
+      s: cellNormalHeader
+    });
+  }
 
-  // 4. Criar a linha detalhada de texto das Partidas (nomes das seleções e data, livre de emojis)
+  // 4. Criar a linha detalhada de texto das Partidas
   const matchTextHeaderRow: any[] = [
     { v: "", t: "s", s: cellNormalHeader },
     { v: "", t: "s", s: cellNormalHeader },
-    ...matches.map((m) => {
-      const parts = (m.scheduled || "").split(" às ");
-      const datePart = parts[0] || "";
-      const headerText = `${m.home.name} x ${m.away.name}\n${datePart}`;
-      return {
-        v: headerText,
-        t: "s",
-        s: getGroupHeaderStyle(m.group),
-      };
-    })
   ];
+  for (const m of matches) {
+    const dateFormatted = m.scheduled
+      ? new Date(parseMatchDate(m.scheduled)).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+      : "";
+    matchTextHeaderRow.push({
+      v: `${m.home.name.substring(0, 3).toUpperCase()} × ${m.away.name.substring(0, 3).toUpperCase()} (${dateFormatted})`,
+      t: "s",
+      s: cellNormalHeader
+    });
+  }
 
-  // Informações Gerais da Liga (Sem o e-mail do organizador)
+  // Informações Gerais da Liga
   const titleRow = [
-    { v: `LIGA: ${league.name}`, t: "s", s: { font: { bold: true, name: "Segoe UI", sz: 14 } } }
+    { v: `TABELA GERAL DE PALPITES - LIGA: ${league.name.toUpperCase()}`, t: "s", s: { font: { name: "Segoe UI", bold: true, sz: 14 } } }
   ];
   const dateRow = [
-    { v: `Exportado em: ${formatDateTime(new Date())}`, t: "s", s: { font: { italic: true, name: "Segoe UI", sz: 10 } } }
+    { v: `Gerado em: ${new Date().toLocaleString("pt-BR")}`, t: "s", s: { font: { name: "Segoe UI", italic: true, sz: 10 } } }
   ];
   const rulesRow = [
-    { v: `Regras de Pontuação — Placar Exato: ${league.rules.exact} pts | Resultado: ${league.rules.result} pts`, t: "s", s: { font: { name: "Segoe UI", sz: 10 } } }
+    { v: `Regra de Pontuação: Acerto Exato = ${league.rules.exact} pts | Acerto de Vencedor/Empate = ${league.rules.result} pts`, t: "s", s: { font: { name: "Segoe UI", sz: 10 } } }
   ];
   const creatorRow = [
     { v: `Organizador: ${league.creatorName}`, t: "s", s: { font: { name: "Segoe UI", sz: 10 } } }
@@ -296,19 +283,35 @@ export function downloadLeagueExcel(
     dateRow,
     rulesRow,
     creatorRow,
-    [], // linha em branco
-    groupHeaderRow,      // Linha 6: Agrupamento de Grupos (Ex: Grupo A)
-    flagHeaderRow,       // Linha 7: Emojis das Bandeiras
-    matchTextHeaderRow,  // Linha 8: Nomes dos Confrontos e Datas (sem emojis)
+    [],
+    groupHeaderRow,
+    flagHeaderRow,
+    matchTextHeaderRow,
     ...participants.map((p) => {
       return [
         { v: p.name, t: "s", s: cellParticipantData },
         { v: p.nickname, t: "s", s: cellParticipantData },
         ...matches.map((m) => {
+          const matchSubPhase = m.id.startsWith("QUARTAS-") ? "quartas" : m.id.startsWith("SEMI-") ? "semi" : "final";
+          const now = new Date().getTime();
+          
+          let shouldHide = false;
+          if (league.phase === "fase-final" && expiryDates) {
+            if (matchSubPhase === "quartas" && expiryDates.quartas && now < expiryDates.quartas.getTime()) {
+              shouldHide = true;
+            } else if (matchSubPhase === "semi" && expiryDates.semi && now < expiryDates.semi.getTime()) {
+              shouldHide = true;
+            } else if (matchSubPhase === "final" && expiryDates.final && now < expiryDates.final.getTime()) {
+              shouldHide = true;
+            }
+          }
+          
           const pred = p.scores[m.id];
-          const val = pred && pred.home.trim() !== "" && pred.away.trim() !== "" 
-            ? `${pred.home} × ${pred.away}` 
-            : "";
+          const val = shouldHide 
+            ? "🔒" 
+            : (pred && pred.home.trim() !== "" && pred.away.trim() !== "" 
+                ? `${pred.home} × ${pred.away}` 
+                : "");
           return { v: val, t: "s", s: cellScoreData };
         })
       ];

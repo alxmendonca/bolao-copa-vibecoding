@@ -45,6 +45,9 @@ export default function ParticipantDetail() {
   const [deadlineDate, setDeadlineDate] = useState<Date | null>(null);
   const [startSemiDate, setStartSemiDate] = useState<Date | null>(null);
   const [startFinalDate, setStartFinalDate] = useState<Date | null>(null);
+  const [expiryQuartas, setExpiryQuartas] = useState<Date | null>(null);
+  const [expirySemi, setExpirySemi] = useState<Date | null>(null);
+  const [expiryFinal, setExpiryFinal] = useState<Date | null>(null);
 
   const isOitavasPreStart = useMemo(() => {
     return league?.phase === "oitavas" && !deadlinePassed;
@@ -87,13 +90,16 @@ export default function ParticipantDetail() {
     if (!leagueId || !participantId) return;
     try {
       const leagueData = await getLeague(leagueId);
-      const [pData, results, isPassed, limitDate, semiStart, finalStart] = await Promise.all([
+      const [pData, results, isPassed, limitDate, semiStart, finalStart, qfLimit, sfLimit, fnLimit] = await Promise.all([
         getParticipant(leagueId, participantId),
         getOfficialResults(),
         isSubmissionDeadlinePassed(leagueData.isKnockout, leagueData.phase),
         getExpiryDate(leagueData.isKnockout, leagueData.phase),
         getStartDate("semi"),
         getStartDate("final"),
+        getExpiryDate(leagueData.isKnockout, "quartas"),
+        getExpiryDate(leagueData.isKnockout, "semi"),
+        getExpiryDate(leagueData.isKnockout, "final"),
       ]);
       setLeague(leagueData);
       setParticipant(pData);
@@ -103,6 +109,9 @@ export default function ParticipantDetail() {
       setDeadlineDate(limitDate);
       setStartSemiDate(semiStart);
       setStartFinalDate(finalStart);
+      setExpiryQuartas(qfLimit);
+      setExpirySemi(sfLimit);
+      setExpiryFinal(fnLimit);
     } catch (err: any) {
       setError(err.message || "Erro ao carregar os palpites.");
     } finally {
@@ -412,6 +421,18 @@ export default function ParticipantDetail() {
                     }
                   }
                   
+                  let shouldHidePrediction = false;
+                  if (!isAuthorized) {
+                    const timeNow = new Date().getTime();
+                    if (matchSubPhase === "quartas" && expiryQuartas && timeNow < expiryQuartas.getTime()) {
+                      shouldHidePrediction = true;
+                    } else if (matchSubPhase === "semi" && expirySemi && timeNow < expirySemi.getTime()) {
+                      shouldHidePrediction = true;
+                    } else if (matchSubPhase === "final" && expiryFinal && timeNow < expiryFinal.getTime()) {
+                      shouldHidePrediction = true;
+                    }
+                  }
+                  
                   return (
                     <li key={m.id}>
                       <MatchRow
@@ -422,6 +443,7 @@ export default function ParticipantDetail() {
                         officialScore={officialResults?.scores?.[m.id]}
                         rules={league?.rules}
                         lockReason={lockReason}
+                        hidePredictions={shouldHidePrediction}
                       />
                     </li>
                   );
