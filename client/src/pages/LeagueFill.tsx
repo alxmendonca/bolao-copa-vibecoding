@@ -62,20 +62,17 @@ export default function LeagueFill() {
         setStartSemiDate(semiStart);
         setStartFinalDate(finalStart);
 
-        let joinPassed = isPassed;
-        if (l.phase === "fase-final") {
-          const quartasLimit = await getExpiryDate(l.isKnockout, "quartas");
-          joinPassed = new Date().getTime() > quartasLimit.getTime();
-          setFormattedQuartasDeadline(quartasLimit.toLocaleString("pt-BR", {
-            timeZone: "America/Sao_Paulo",
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          }));
-        }
-        setJoinDeadlinePassed(joinPassed);
+        setJoinDeadlinePassed(true);
+
+        const expiryDate = await getExpiryDate(l.isKnockout, l.phase);
+        setFormattedQuartasDeadline(expiryDate.toLocaleString("pt-BR", {
+          timeZone: "America/Sao_Paulo",
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }));
 
         // Inicializa placares vazios baseados na fase da liga
         const matches = getLeagueMatches(l.phase);
@@ -295,7 +292,7 @@ export default function LeagueFill() {
             <strong>🔒 Inscrições Encerradas:</strong>
             <p>
               O prazo para novas inscrições nesta liga encerrou em{" "}
-              {league?.phase === "fase-final" ? `${formattedQuartasDeadline} BRT` : (league?.isKnockout ? "28 de Junho às 16:00 BRT" : "11 de Junho às 14:00 BRT")}.
+              {`${formattedQuartasDeadline} BRT`}.
             </p>
             <p style={{ marginTop: "0.5rem", fontSize: "0.9rem" }}>
               Novos participantes não podem mais se cadastrar. Se você já tem palpites cadastrados nesta liga, utilize seu link individual para editá-los.
