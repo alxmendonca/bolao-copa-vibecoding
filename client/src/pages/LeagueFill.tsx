@@ -6,7 +6,6 @@ import { MatchRow } from "../components/MatchRow";
 import {
   getLeague,
   joinLeague,
-  isSubmissionDeadlinePassed,
   getExpiryDate,
   getLeagueMatches,
   isFirebaseConfigured,
@@ -51,8 +50,7 @@ export default function LeagueFill() {
     const loadLeague = async () => {
       try {
         const l = await getLeague(leagueId);
-        const [isPassed, results, semiStart, finalStart] = await Promise.all([
-          isSubmissionDeadlinePassed(l.isKnockout, l.phase),
+        const [results, semiStart, finalStart] = await Promise.all([
           getOfficialResults(),
           getStartDate("semi"),
           getStartDate("final"),
