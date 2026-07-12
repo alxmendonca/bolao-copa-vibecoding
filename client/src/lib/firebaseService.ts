@@ -232,7 +232,7 @@ export async function getExpiryDate(isKnockout?: boolean, phase?: string): Promi
       return s && s.home.trim() !== "" && s.away.trim() !== "";
     });
     if (!allSfFinished) {
-      return new Date("2026-07-14T20:00:00-03:00"); // Semi deadline (14 Jul às 20h BRT)
+      return new Date("2026-07-14T16:00:00-03:00"); // Semi deadline (14 Jul às 16h BRT)
     }
     return new Date("2026-07-18T16:00:00-03:00"); // Final deadline (18 Jul às 16h BRT)
   }

@@ -120,12 +120,7 @@ export default function LeagueDetail() {
       setExpirySemi(sfLimit);
       setExpiryFinal(fnLimit);
       
-      let joinPassed = isPassed;
-      if (leagueData.phase === "fase-final") {
-        const quartasLimit = await getExpiryDate(leagueData.isKnockout, "quartas");
-        joinPassed = new Date().getTime() > quartasLimit.getTime();
-      }
-      setJoinDeadlinePassed(joinPassed);
+      setJoinDeadlinePassed(isPassed);
     } catch (err: any) {
       setError(err.message || "Erro ao carregar dados da liga.");
     } finally {

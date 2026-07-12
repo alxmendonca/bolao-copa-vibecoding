@@ -91,8 +91,8 @@ export const QUARTAS_MATCHES: MatchDef[] = [
 ];
 
 export const SEMI_MATCHES: MatchDef[] = [
-  { id: "SEMI-1", group: "Semifinais", home: { id: "TBD", name: "Vencedor QUARTAS-1" }, away: { id: "TBD", name: "Vencedor QUARTAS-2" }, scheduled: "14 de jul às 20:00" },
-  { id: "SEMI-2", group: "Semifinais", home: { id: "TBD", name: "Vencedor QUARTAS-3" }, away: { id: "TBD", name: "Vencedor QUARTAS-4" }, scheduled: "15 de jul às 20:00" },
+  { id: "SEMI-1", group: "Semifinais", home: KNOCKOUT_TEAMS.esp, away: KNOCKOUT_TEAMS.fra, scheduled: "14 de jul às 16:00" },
+  { id: "SEMI-2", group: "Semifinais", home: KNOCKOUT_TEAMS.arg, away: KNOCKOUT_TEAMS.eng, scheduled: "15 de jul às 16:00" },
 ];
 
 export const FINAL_MATCHES: MatchDef[] = [
