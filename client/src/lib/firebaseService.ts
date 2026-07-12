@@ -194,7 +194,7 @@ export async function getExpiryDate(isKnockout?: boolean, phase?: string): Promi
     return new Date("2026-07-09T17:00:00-03:00");
   }
   if (phase === "semi") {
-    return new Date("2026-07-14T20:00:00-03:00");
+    return new Date("2026-07-14T16:00:00-03:00");
   }
   if (phase === "final") {
     return new Date("2026-07-18T16:00:00-03:00");

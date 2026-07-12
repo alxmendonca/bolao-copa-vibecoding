@@ -120,7 +120,7 @@ export default function LeagueDetail() {
       setExpirySemi(sfLimit);
       setExpiryFinal(fnLimit);
       
-      setJoinDeadlinePassed(isPassed);
+      setJoinDeadlinePassed(true);
     } catch (err: any) {
       setError(err.message || "Erro ao carregar dados da liga.");
     } finally {

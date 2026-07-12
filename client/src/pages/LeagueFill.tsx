@@ -62,8 +62,7 @@ export default function LeagueFill() {
         setStartSemiDate(semiStart);
         setStartFinalDate(finalStart);
 
-        let joinPassed = isPassed;
-        setJoinDeadlinePassed(joinPassed);
+        setJoinDeadlinePassed(true);
 
         const expiryDate = await getExpiryDate(l.isKnockout, l.phase);
         setFormattedQuartasDeadline(expiryDate.toLocaleString("pt-BR", {
