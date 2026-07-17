@@ -96,8 +96,8 @@ export const SEMI_MATCHES: MatchDef[] = [
 ];
 
 export const FINAL_MATCHES: MatchDef[] = [
-  { id: "FINAL-2", group: "3º Lugar", home: { id: "TBD", name: "Perdedor SEMI-1" }, away: { id: "TBD", name: "Perdedor SEMI-2" }, scheduled: "18 de jul às 16:00" },
-  { id: "FINAL-1", group: "Final", home: { id: "TBD", name: "Vencedor SEMI-1" }, away: { id: "TBD", name: "Vencedor SEMI-2" }, scheduled: "19 de jul às 16:00" },
+  { id: "FINAL-2", group: "3º Lugar", home: KNOCKOUT_TEAMS.fra, away: KNOCKOUT_TEAMS.eng, scheduled: "18 de jul às 18:00" },
+  { id: "FINAL-1", group: "Final", home: KNOCKOUT_TEAMS.esp, away: KNOCKOUT_TEAMS.arg, scheduled: "19 de jul às 16:00" },
 ];
 
 export const ALL_KNOCKOUT_MATCHES: MatchDef[] = [
